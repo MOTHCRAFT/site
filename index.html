@@ -37,7 +37,6 @@
         const mouse = { x: null, y: null };
         let portalProgress = 0;
 
-        // Visual Centers based on bg.jpg
         const lampX = () => window.innerWidth * 0.77;
         const lampY = () => window.innerHeight * 0.24;
         const plantX = () => window.innerWidth * 0.32;
@@ -54,15 +53,14 @@
             bugs = [new Bug(true)]; 
             for (let i = 0; i < 18; i++) bugs.push(new Bug(false));
             
-            // Generate non-uniform stalks in front of the plant
             stalks = [];
-            for (let i = 0; i < 12; i++) {
+            for (let i = 0; i < 15; i++) {
                 stalks.push({
-                    x: plantX() - 80 + (Math.random() * 160),
-                    baseY: window.innerHeight * 0.92, // Sitting on the path
-                    h: 350 + Math.random() * 150, // Massive enough to cover
-                    w: 2 + Math.random() * 3,
-                    angle: (Math.random() - 0.5) * 0.4, // Organic diagonal lean
+                    x: plantX() - 100 + (Math.random() * 200),
+                    baseY: window.innerHeight * 0.75, // Rooted higher up, closer to plant
+                    h: 150 + Math.random() * 150, // Height relative to root
+                    w: 2 + Math.random() * 2,
+                    angle: (Math.random() - 0.5) * 0.6,
                     off: Math.random() * 1000
                 });
             }
@@ -91,7 +89,7 @@
                             else this.patience = Math.min(100, this.patience + 0.3);
                         } else { this.patience -= 0.7; }
                         if (this.patience <= 0) this.returning = true;
-                        if (this.returning && d < 40) this.returning = false; // "Resets" at globe
+                        if (this.returning && d < 40) this.returning = false;
                     } else if (d < 90) { targetX = mouse.x; targetY = mouse.y; }
                 }
 
@@ -100,7 +98,7 @@
                 this.x += this.vx; this.y += this.vy;
                 this.vx *= 0.92; this.vy *= 0.92;
 
-                if (this.isBig && Math.hypot(this.x - px, this.y - py) < 70) {
+                if (this.isBig && Math.hypot(this.x - px, this.y - py) < 80) {
                     portalProgress++;
                     if (portalProgress > 100) loginPanel.style.display = 'block';
                 } else if (this.isBig) { portalProgress = 0; }
@@ -112,19 +110,18 @@
         }
 
         function drawVeil() {
-            ctx.strokeStyle = 'rgba(2, 5, 2, 0.98)'; // Dark, silhouette green-black
+            ctx.strokeStyle = 'rgba(210, 180, 140, 0.8)'; // DEBUG COLOR: TAN
             stalks.forEach(s => {
                 let lean = s.angle;
                 if (mouse.x) {
                     let d = Math.abs(mouse.x - s.x);
-                    if (d < 150) lean += (mouse.x - s.x) * 0.003; // Gentle hint movement
+                    if (d < 150) lean += (mouse.x - s.x) * 0.004;
                 }
                 ctx.lineWidth = s.w;
                 ctx.beginPath();
                 ctx.moveTo(s.x, s.baseY);
-                // Quadratic curve for more organic "bend"
-                let cpX = s.x + (lean * 50);
-                let endX = s.x + (lean * 120) + Math.sin(Date.now()*0.001 + s.off)*15;
+                let cpX = s.x + (lean * 40);
+                let endX = s.x + (lean * 100) + Math.sin(Date.now()*0.001 + s.off)*15;
                 ctx.quadraticCurveTo(cpX, s.baseY - s.h/2, endX, s.baseY - s.h);
                 ctx.stroke();
             });
