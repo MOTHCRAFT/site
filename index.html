@@ -55,15 +55,27 @@
             for (let i = 0; i < 18; i++) bugs.push(new Bug(false));
             
             stalks = [];
-            for (let i = 0; i < 20; i++) {
+            for (let i = 0; i < 16; i++) {
+                let sH = 500 + Math.random() * 350;
+                let sLeaves = [];
+                // Generate 3-5 "shucks" or leaves per stalk
+                for(let j=0; j < 4; j++) {
+                    sLeaves.push({
+                        yOff: 0.3 + (Math.random() * 0.5), // height on stalk
+                        side: Math.random() > 0.5 ? 1 : -1,
+                        len: 30 + Math.random() * 50,
+                        droop: 20 + Math.random() * 40
+                    });
+                }
                 stalks.push({
-                    relativeX: (plantX() - 120 + (Math.random() * 240)), // Position relative to background
-                    baseY: window.innerHeight * (0.85 + (Math.random() * 0.05)), // Higher up and randomized
-                    h: 400 + Math.random() * 250, 
-                    w: 2 + Math.random() * 4,
-                    stiffness: 0.05 + Math.random() * 0.1,
-                    drift: (Math.random() - 0.5) * 0.2,
+                    relativeX: (plantX() - 180 + (Math.random() * 360)), 
+                    baseY: window.innerHeight * (0.80 + (Math.random() * 0.08)),
+                    h: sH, 
+                    w: 2 + Math.random() * 3,
+                    stiffness: 0.04 + Math.random() * 0.08,
+                    drift: (Math.random() - 0.5) * 0.3,
                     off: Math.random() * 1000,
+                    leaves: sLeaves,
                     currentPush: 0
                 });
             }
@@ -114,41 +126,50 @@
 
         function drawVeil() {
             stalks.forEach(s => {
-                // Anchoring logic: Adjust actual X by the background pan offset
                 let anchoredX = s.relativeX - globalMoveX;
-                
-                // Parting Logic: Push stalks away from mouse
                 let targetPush = 0;
                 if (mouse.x) {
                     let dx = mouse.x - anchoredX;
                     let dy = mouse.y - (s.baseY - s.h/2);
                     let dist = Math.hypot(dx, dy);
-                    if (dist < 150) {
-                        targetPush = (dx > 0 ? -60 : 60) * (1 - dist/150);
+                    if (dist < 200) {
+                        targetPush = (dx > 0 ? -90 : 90) * (1 - dist/200);
                     }
                 }
                 s.currentPush += (targetPush - s.currentPush) * s.stiffness;
 
                 const time = Date.now() * 0.001;
-                const wind = Math.sin(time + s.off) * 12;
+                const wind = Math.sin(time + s.off) * 15;
                 
                 const startX = anchoredX;
                 const startY = s.baseY;
-                const endX = anchoredX + s.currentPush + wind + (s.drift * 100);
+                const endX = anchoredX + s.currentPush + wind + (s.drift * 150);
                 const endY = s.baseY - s.h;
 
-                // Stalk
+                // 1. Draw Stalk
                 ctx.strokeStyle = 'rgba(210, 180, 140, 0.7)'; // Tan for debug
                 ctx.lineWidth = s.w;
                 ctx.beginPath();
                 ctx.moveTo(startX, startY);
-                ctx.quadraticCurveTo(startX + s.currentPush * 0.5, startY - s.h/2, endX, endY);
+                const cpX = startX + s.currentPush * 0.5;
+                const cpY = startY - s.h/2;
+                ctx.quadraticCurveTo(cpX, cpY, endX, endY);
                 ctx.stroke();
 
-                // Seed-head
+                // 2. Draw Shucks (Leaves)
+                s.leaves.forEach(l => {
+                    let lx = startX + (endX - startX) * l.yOff;
+                    let ly = startY + (endY - startY) * l.yOff;
+                    ctx.beginPath();
+                    ctx.moveTo(lx, ly);
+                    ctx.quadraticCurveTo(lx + (l.side * l.len), ly + l.droop, lx + (l.side * l.len * 0.8), ly + l.droop + 10);
+                    ctx.stroke();
+                });
+
+                // 3. Draw Fuzzy Head
                 ctx.fillStyle = 'rgba(210, 180, 140, 0.4)';
                 ctx.beginPath();
-                ctx.ellipse(endX, endY, s.w * 1.5, 18 + (s.w * 2), Math.atan2(endY - startY, endX - startX) + Math.PI/2, 0, Math.PI * 2);
+                ctx.ellipse(endX, endY, s.w * 2, 22 + (s.w * 3), Math.atan2(endY - startY, endX - startX) + Math.PI/2, 0, Math.PI * 2);
                 ctx.fill();
             });
         }
@@ -160,8 +181,8 @@
             requestAnimationFrame(animate);
         }
 
-            window.addEventListener('resize', setup);
-            setup(); animate();
+        window.addEventListener('resize', setup);
+        setup(); animate();
     </script>
 </body>
 </html>
