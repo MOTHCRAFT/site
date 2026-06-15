@@ -6,8 +6,13 @@
     <title>MOTHLABS</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
-        .sanctuary-bg { position: fixed; top: 0; left: -10%; width: 120%; height: 100%; background: url('bg.jpg') no-repeat center center; background-size: cover; z-index: 1; transition: transform 0.3s ease-out; }
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.85) 100%); pointer-events: none; z-index: 10; }
+        /* Fixed Background - ensure filename matches bg.jpg exactly */
+        .sanctuary-bg { 
+            position: fixed; top: 0; left: -10%; width: 120%; height: 100%; 
+            background: url('bg.jpg') no-repeat center center; 
+            background-size: cover; z-index: 1; transition: transform 0.4s ease-out; 
+        }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.9) 100%); pointer-events: none; z-index: 10; }
         canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 11; }
         #loginPanel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 320px; padding: 40px; background: rgba(0,0,0,0.95); border: 1px solid #00ff41; color: #fff; font-family: monospace; z-index: 100; display: none; text-align: center; box-shadow: 0 0 30px rgba(0,255,65,0.3); }
     </style>
@@ -18,7 +23,7 @@
     <canvas id="mainCanvas"></canvas>
     <div id="loginPanel">
         <h2 style="color: #00ff41; letter-spacing: 5px; margin-bottom: 20px;">MOTHLABS</h2>
-        <p style="font-size: 10px; color: #888;">IDENTITY VERIFICATION REQUIRED</p>
+        <p style="font-size: 10px; color: #888;">CONSCIOUSNESS DETECTED</p>
         <input type="password" placeholder="ENTER PORTAL" style="background: #000; border: 1px solid #00ff41; color: #00ff41; padding: 12px; width: 80%; outline: none; margin-top: 10px;">
     </div>
 
@@ -35,16 +40,19 @@
 
         window.addEventListener('mousemove', (e) => {
             mouse.x = e.x; mouse.y = e.y;
-            const moveX = (e.clientX / window.innerWidth - 0.5) * 40;
+            const moveX = (e.clientX / window.innerWidth - 0.5) * 50;
             bg.style.transform = `translateX(${-moveX}px)`;
         });
 
         function setup() {
             canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            bugs = [new Bug(true)]; // The Big Fuzzy
-            for (let i = 0; i < 25; i++) bugs.push(new Bug(false)); // The gnats
+            bugs = [new Bug(true)]; 
+            for (let i = 0; i < 30; i++) bugs.push(new Bug(false));
             grass = [];
-            for (let i = 0; i < 8; i++) grass.push({ x: window.innerWidth * (0.2 + (Math.random() * 0.1)), h: 150 + Math.random() * 100 });
+            // Spread grass across the bottom to create that "horizontal slice"
+            for (let i = 0; i < window.innerWidth; i += 12) {
+                grass.push({ x: i, h: 100 + Math.random() * 150, off: Math.random() * 1000 });
+            }
         }
 
         class Bug {
@@ -52,7 +60,7 @@
                 this.isBig = isBig;
                 this.x = window.innerWidth * 0.75;
                 this.y = window.innerHeight * 0.6;
-                this.size = isBig ? 5 : 1;
+                this.size = isBig ? 4 : 1;
                 this.vx = 0; this.vy = 0;
                 this.patience = 100;
                 this.returning = false;
@@ -65,47 +73,44 @@
                 if (mouse.x) {
                     let d = Math.hypot(mouse.x - this.x, mouse.y - this.y);
                     if (this.isBig) {
-                        if (d < 250 && !this.returning) {
+                        if (d < 300 && !this.returning) {
                             targetX = mouse.x; targetY = mouse.y;
-                            if (d > 120) this.patience -= 0.2; // Lose patience if you pull too fast
-                            else this.patience = Math.min(100, this.patience + 0.5);
-                        } else {
-                            this.patience -= 1;
-                        }
+                            if (d > 150) this.patience -= 0.15;
+                            else this.patience = Math.min(100, this.patience + 0.4);
+                        } else { this.patience -= 0.8; }
                         if (this.patience <= 0) this.returning = true;
-                        if (this.returning && d < 50) this.returning = false; // Reset home
-                    } else if (d < 100) { targetX = mouse.x; targetY = mouse.y; }
+                        if (this.returning && d < 60) this.returning = false;
+                    } else if (d < 80) { targetX = mouse.x; targetY = mouse.y; }
                 }
 
-                this.vx += (targetX - this.x) * (this.isBig ? 0.001 : 0.005) + (Math.random()-0.5) * 1.5;
-                this.vy += (targetY - this.y) * (this.isBig ? 0.001 : 0.005) + (Math.random()-0.5) * 1.5;
+                this.vx += (targetX - this.x) * (this.isBig ? 0.0008 : 0.004) + (Math.random()-0.5) * 1.2;
+                this.vy += (targetY - this.y) * (this.isBig ? 0.0008 : 0.004) + (Math.random()-0.5) * 1.2;
                 this.x += this.vx; this.y += this.vy;
-                this.vx *= 0.93; this.vy *= 0.93;
+                this.vx *= 0.94; this.vy *= 0.94;
 
-                // Settle logic
-                if (this.isBig && Math.hypot(this.x - px, this.y - py) < 60) {
+                if (this.isBig && Math.hypot(this.x - px, this.y - py) < 80) {
                     portalProgress++;
-                    if (portalProgress > 120) loginPanel.style.display = 'block';
+                    if (portalProgress > 100) loginPanel.style.display = 'block';
                 } else if (this.isBig) { portalProgress = 0; }
             }
             draw() {
-                ctx.fillStyle = this.isBig ? `rgba(255,255,255,${this.patience/100})` : 'rgba(200,200,200,0.3)';
+                ctx.fillStyle = this.isBig ? `rgba(255,255,255,${this.patience/100})` : 'rgba(255,255,180,0.2)';
                 ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill();
             }
         }
 
         function drawGrass() {
-            ctx.strokeStyle = 'rgba(10, 20, 10, 0.8)';
-            ctx.lineWidth = 4;
+            ctx.strokeStyle = 'rgba(5, 10, 5, 0.9)'; // Deep dark silhouettes
+            ctx.lineWidth = 3;
             grass.forEach(g => {
                 let lean = 0;
                 if (mouse.x) {
-                    let d = Math.hypot(mouse.x - g.x, mouse.y - (window.innerHeight - g.h));
-                    if (d < 150) lean = (mouse.x - g.x) * 0.2;
+                    let d = Math.abs(mouse.x - g.x);
+                    if (d < 100) lean = (mouse.x - g.x) * 0.3;
                 }
                 ctx.beginPath();
                 ctx.moveTo(g.x, window.innerHeight);
-                ctx.quadraticCurveTo(g.x, window.innerHeight - g.h, g.x + lean + Math.sin(Date.now()*0.001 + g.x)*10, window.innerHeight - g.h);
+                ctx.quadraticCurveTo(g.x, window.innerHeight - g.h/2, g.x + lean + Math.sin(Date.now()*0.001 + g.off)*15, window.innerHeight - g.h);
                 ctx.stroke();
             });
         }
