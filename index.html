@@ -36,6 +36,7 @@
         let stalks = [];
         const mouse = { x: null, y: null };
         let portalProgress = 0;
+        let globalMoveX = 0;
 
         const lampX = () => window.innerWidth * 0.77;
         const lampY = () => window.innerHeight * 0.24;
@@ -44,98 +45,110 @@
 
         window.addEventListener('mousemove', (e) => {
             mouse.x = e.x; mouse.y = e.y;
-            const moveX = (e.clientX / window.innerWidth - 0.5) * 45;
-            bg.style.transform = `translateX(${-moveX}px)`;
+            globalMoveX = (e.clientX / window.innerWidth - 0.5) * 45;
+            bg.style.transform = `translateX(${-globalMoveX}px)`;
         });
 
         function setup() {
             canvas.width = window.innerWidth; canvas.height = window.innerHeight;
             bugs = [new Bug(true)]; 
-            for (let i = 0; i < 22; i++) bugs.push(new Bug(false));
+            for (let i = 0; i < 18; i++) bugs.push(new Bug(false));
             
-            const offsets = [-90, -60, -35, -10, 10, 30, 55, 80, 105, 130, 160, 190];
-            stalks = offsets.map((off, i) => ({
-                x: plantX() + off,
-                baseY: window.innerHeight * 0.95, // Rooted deeper
-                h: 500 + (i % 4 * 60), // Towering height
-                w: 3 + (i % 2 * 2),
-                lean: (i % 2 === 0 ? -0.15 : 0.15),
-                seed: i * 700
-            }));
+            stalks = [];
+            for (let i = 0; i < 20; i++) {
+                stalks.push({
+                    relativeX: (plantX() - 120 + (Math.random() * 240)), // Position relative to background
+                    baseY: window.innerHeight * (0.85 + (Math.random() * 0.05)), // Higher up and randomized
+                    h: 400 + Math.random() * 250, 
+                    w: 2 + Math.random() * 4,
+                    stiffness: 0.05 + Math.random() * 0.1,
+                    drift: (Math.random() - 0.5) * 0.2,
+                    off: Math.random() * 1000,
+                    currentPush: 0
+                });
+            }
         }
 
         class Bug {
             constructor(isBig) {
                 this.isBig = isBig;
                 this.x = lampX(); this.y = lampY();
-                this.size = isBig ? 5 : 1.2;
-                this.vx = (Math.random()-0.5) * 4; this.vy = (Math.random()-0.5) * 4;
+                this.size = isBig ? 5 : 1;
+                this.vx = (Math.random()-0.5) * 5; this.vy = (Math.random()-0.5) * 5;
                 this.patience = 100;
                 this.returning = false;
             }
             update() {
-                let lx = lampX(), ly = lampY();
-                let px = plantX(), py = plantY();
+                let lx = lampX() - globalMoveX, ly = lampY();
+                let px = plantX() - globalMoveX, py = plantY();
                 let targetX = lx, targetY = ly;
 
                 if (mouse.x) {
                     let d = Math.hypot(mouse.x - this.x, mouse.y - this.y);
                     if (this.isBig) {
-                        if (d < 350 && !this.returning) {
+                        if (d < 300 && !this.returning) {
                             targetX = mouse.x; targetY = mouse.y;
-                            if (d > 140) this.patience -= 0.15;
-                            else this.patience = Math.min(100, this.patience + 0.4);
-                        } else { this.patience -= 0.8; }
+                            if (d > 140) this.patience -= 0.18;
+                            else this.patience = Math.min(100, this.patience + 0.3);
+                        } else { this.patience -= 0.7; }
                         if (this.patience <= 0) this.returning = true;
-                        if (this.returning && Math.hypot(this.x - lx, this.y - ly) < 30) this.returning = false;
-                    } else {
-                        // Small bugs stay tight to the light
-                        targetX = lx + (Math.random()-0.5)*40;
-                        targetY = ly + (Math.random()-0.5)*40;
-                    }
+                        if (this.returning && Math.hypot(this.x - lx, this.y - ly) < 40) this.returning = false;
+                    } else if (d < 90) { targetX = mouse.x; targetY = mouse.y; }
                 }
 
-                this.vx += (targetX - this.x) * (this.isBig ? 0.0012 : 0.008) + (Math.random()-0.5) * 1.8;
-                this.vy += (targetY - this.y) * (this.isBig ? 0.0012 : 0.008) + (Math.random()-0.5) * 1.8;
+                this.vx += (targetX - this.x) * (this.isBig ? 0.0007 : 0.004) + (Math.random()-0.5) * 1.6;
+                this.vy += (targetY - this.y) * (this.isBig ? 0.0007 : 0.004) + (Math.random()-0.5) * 1.6;
                 this.x += this.vx; this.y += this.vy;
-                this.vx *= 0.90; this.vy *= 0.92;
+                this.vx *= 0.92; this.vy *= 0.92;
 
-                if (this.isBig && Math.hypot(this.x - px, this.y - py) < 90) {
+                if (this.isBig && Math.hypot(this.x - px, this.y - py) < 80) {
                     portalProgress++;
                     if (portalProgress > 100) loginPanel.style.display = 'block';
                 } else if (this.isBig) { portalProgress = 0; }
             }
             draw() {
-                ctx.fillStyle = this.isBig ? `rgba(255,255,255,${Math.max(0.1, this.patience/100)})` : 'rgba(255,255,150,0.4)';
-                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = this.isBig ? `rgba(255,255,255,${Math.max(0.1, this.patience/100)})` : 'rgba(255,255,180,0.1)';
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
             }
         }
 
         function drawVeil() {
             stalks.forEach(s => {
-                let leanX = s.lean;
+                // Anchoring logic: Adjust actual X by the background pan offset
+                let anchoredX = s.relativeX - globalMoveX;
+                
+                // Parting Logic: Push stalks away from mouse
+                let targetPush = 0;
                 if (mouse.x) {
-                    let d = Math.abs(mouse.x - s.x);
-                    if (d < 180) leanX += (mouse.x - s.x) * 0.004;
+                    let dx = mouse.x - anchoredX;
+                    let dy = mouse.y - (s.baseY - s.h/2);
+                    let dist = Math.hypot(dx, dy);
+                    if (dist < 150) {
+                        targetPush = (dx > 0 ? -60 : 60) * (1 - dist/150);
+                    }
                 }
+                s.currentPush += (targetPush - s.currentPush) * s.stiffness;
 
                 const time = Date.now() * 0.001;
-                const wind = Math.sin(time + s.seed) * 12;
-                const startX = s.x;
+                const wind = Math.sin(time + s.off) * 12;
+                
+                const startX = anchoredX;
                 const startY = s.baseY;
-                const endX = s.x + (leanX * 150) + wind;
+                const endX = anchoredX + s.currentPush + wind + (s.drift * 100);
                 const endY = s.baseY - s.h;
 
+                // Stalk
                 ctx.strokeStyle = 'rgba(210, 180, 140, 0.7)'; // Tan for debug
                 ctx.lineWidth = s.w;
                 ctx.beginPath();
                 ctx.moveTo(startX, startY);
-                ctx.quadraticCurveTo(startX + (leanX * 60), startY - s.h/2, endX, endY);
+                ctx.quadraticCurveTo(startX + s.currentPush * 0.5, startY - s.h/2, endX, endY);
                 ctx.stroke();
 
-                ctx.fillStyle = 'rgba(210, 180, 140, 0.5)';
+                // Seed-head
+                ctx.fillStyle = 'rgba(210, 180, 140, 0.4)';
                 ctx.beginPath();
-                ctx.ellipse(endX, endY, s.w * 2.5, 25, Math.atan2(endY - startY, endX - startX) + Math.PI/2, 0, Math.PI * 2);
+                ctx.ellipse(endX, endY, s.w * 1.5, 18 + (s.w * 2), Math.atan2(endY - startY, endX - startX) + Math.PI/2, 0, Math.PI * 2);
                 ctx.fill();
             });
         }
@@ -147,8 +160,8 @@
             requestAnimationFrame(animate);
         }
 
-        window.addEventListener('resize', setup);
-        setup(); animate();
+            window.addEventListener('resize', setup);
+            setup(); animate();
     </script>
 </body>
 </html>
