@@ -5,87 +5,120 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MOTHLABS</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #050505; font-family: 'Courier New', Courier, monospace; }
-        .space { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at 50% 50%, #1a0b2e 0%, #050505 70%); z-index: 1; }
-        
-        /* The Moths Layer */
-        #mothCanvas { position: absolute; top: 0; left: 0; z-index: 5; pointer-events: none; }
-
-        .light-container { position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center; }
-        .lamp-post { width: 4px; height: 250px; background: #222; margin: 0 auto; position: relative; }
-        .lamp-head { width: 40px; height: 20px; background: #333; border-radius: 50% 50% 0 0; position: absolute; top: -15px; left: -18px; }
-        .glow { position: absolute; top: -60px; left: -100px; width: 200px; height: 200px; background: radial-gradient(circle, rgba(255,255,150,0.2) 0%, rgba(255,255,150,0) 70%); border-radius: 50%; filter: blur(20px); animation: flicker 4s infinite alternate; }
-        @keyframes flicker { 0% { opacity: 0.8; transform: scale(1); } 100% { opacity: 1; transform: scale(1.05); } }
-        .title { position: absolute; bottom: -50px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.3); font-size: 12px; letter-spacing: 8px; text-transform: uppercase; white-space: nowrap; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
+        .sanctuary-bg { position: fixed; top: 0; left: -10%; width: 120%; height: 100%; background: url('bg.jpg') no-repeat center center; background-size: cover; z-index: 1; transition: transform 0.3s ease-out; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.85) 100%); pointer-events: none; z-index: 10; }
+        canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 11; }
+        #loginPanel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 320px; padding: 40px; background: rgba(0,0,0,0.95); border: 1px solid #00ff41; color: #fff; font-family: monospace; z-index: 100; display: none; text-align: center; box-shadow: 0 0 30px rgba(0,255,65,0.3); }
     </style>
 </head>
 <body>
-    <div class="space"></div>
-    <canvas id="mothCanvas"></canvas>
-    
-    <div class="light-container">
-        <div class="glow" id="streetLight"></div>
-        <div class="lamp-post"><div class="lamp-head"></div></div>
-        <div class="title">MOTHLABS</div>
+    <div class="sanctuary-bg" id="bg"></div>
+    <div class="overlay"></div>
+    <canvas id="mainCanvas"></canvas>
+    <div id="loginPanel">
+        <h2 style="color: #00ff41; letter-spacing: 5px; margin-bottom: 20px;">MOTHLABS</h2>
+        <p style="font-size: 10px; color: #888;">IDENTITY VERIFICATION REQUIRED</p>
+        <input type="password" placeholder="ENTER PORTAL" style="background: #000; border: 1px solid #00ff41; color: #00ff41; padding: 12px; width: 80%; outline: none; margin-top: 10px;">
     </div>
 
     <script>
-        const canvas = document.getElementById('mothCanvas');
+        const bg = document.getElementById('bg');
+        const canvas = document.getElementById('mainCanvas');
         const ctx = canvas.getContext('2d');
-        const light = document.getElementById('streetLight').getBoundingClientRect();
-        let moths = [];
+        const loginPanel = document.getElementById('loginPanel');
+        
+        let bugs = [];
+        let grass = [];
         const mouse = { x: null, y: null };
+        let portalProgress = 0;
 
-        window.addEventListener('mousemove', (e) => { mouse.x = e.x; mouse.y = e.y; });
-        window.addEventListener('resize', setup);
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.x; mouse.y = e.y;
+            const moveX = (e.clientX / window.innerWidth - 0.5) * 40;
+            bg.style.transform = `translateX(${-moveX}px)`;
+        });
 
         function setup() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            moths = [];
-            for (let i = 0; i < 30; i++) moths.push(new Moth());
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            bugs = [new Bug(true)]; // The Big Fuzzy
+            for (let i = 0; i < 25; i++) bugs.push(new Bug(false)); // The gnats
+            grass = [];
+            for (let i = 0; i < 8; i++) grass.push({ x: window.innerWidth * (0.2 + (Math.random() * 0.1)), h: 150 + Math.random() * 100 });
         }
 
-        class Moth {
-            constructor() {
-                this.x = Math.random() * canvas.width;
-                this.y = Math.random() * canvas.height;
-                this.size = Math.random() * 2 + 1;
-                this.speedX = 0;
-                this.speedY = 0;
+        class Bug {
+            constructor(isBig) {
+                this.isBig = isBig;
+                this.x = window.innerWidth * 0.75;
+                this.y = window.innerHeight * 0.6;
+                this.size = isBig ? 5 : 1;
+                this.vx = 0; this.vy = 0;
+                this.patience = 100;
+                this.returning = false;
             }
             update() {
-                // Target: Mouse if nearby, otherwise the street light
-                let targetX = mouse.x || (window.innerWidth / 2);
-                let targetY = mouse.y || (window.innerHeight * 0.8);
+                let lx = window.innerWidth * 0.75, ly = window.innerHeight * 0.6;
+                let px = window.innerWidth * 0.25, py = window.innerHeight * 0.65;
+                let targetX = lx, targetY = ly;
 
-                let dx = targetX - this.x;
-                let dy = targetY - this.y;
-                
-                this.speedX += dx * 0.001 + (Math.random() - 0.5) * 0.5;
-                this.speedY += dy * 0.001 + (Math.random() - 0.5) * 0.5;
-                
-                this.x += this.speedX;
-                this.y += this.speedY;
-                this.speedX *= 0.95; // Friction
-                this.speedY *= 0.95;
+                if (mouse.x) {
+                    let d = Math.hypot(mouse.x - this.x, mouse.y - this.y);
+                    if (this.isBig) {
+                        if (d < 250 && !this.returning) {
+                            targetX = mouse.x; targetY = mouse.y;
+                            if (d > 120) this.patience -= 0.2; // Lose patience if you pull too fast
+                            else this.patience = Math.min(100, this.patience + 0.5);
+                        } else {
+                            this.patience -= 1;
+                        }
+                        if (this.patience <= 0) this.returning = true;
+                        if (this.returning && d < 50) this.returning = false; // Reset home
+                    } else if (d < 100) { targetX = mouse.x; targetY = mouse.y; }
+                }
+
+                this.vx += (targetX - this.x) * (this.isBig ? 0.001 : 0.005) + (Math.random()-0.5) * 1.5;
+                this.vy += (targetY - this.y) * (this.isBig ? 0.001 : 0.005) + (Math.random()-0.5) * 1.5;
+                this.x += this.vx; this.y += this.vy;
+                this.vx *= 0.93; this.vy *= 0.93;
+
+                // Settle logic
+                if (this.isBig && Math.hypot(this.x - px, this.y - py) < 60) {
+                    portalProgress++;
+                    if (portalProgress > 120) loginPanel.style.display = 'block';
+                } else if (this.isBig) { portalProgress = 0; }
             }
             draw() {
-                ctx.fillStyle = 'rgba(255, 255, 200, 0.6)';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.fillStyle = this.isBig ? `rgba(255,255,255,${this.patience/100})` : 'rgba(200,200,200,0.3)';
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill();
             }
+        }
+
+        function drawGrass() {
+            ctx.strokeStyle = 'rgba(10, 20, 10, 0.8)';
+            ctx.lineWidth = 4;
+            grass.forEach(g => {
+                let lean = 0;
+                if (mouse.x) {
+                    let d = Math.hypot(mouse.x - g.x, mouse.y - (window.innerHeight - g.h));
+                    if (d < 150) lean = (mouse.x - g.x) * 0.2;
+                }
+                ctx.beginPath();
+                ctx.moveTo(g.x, window.innerHeight);
+                ctx.quadraticCurveTo(g.x, window.innerHeight - g.h, g.x + lean + Math.sin(Date.now()*0.001 + g.x)*10, window.innerHeight - g.h);
+                ctx.stroke();
+            });
         }
 
         function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            moths.forEach(moth => { moth.update(); moth.draw(); });
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            drawGrass();
+            bugs.forEach(b => { b.update(); b.draw(); });
             requestAnimationFrame(animate);
         }
 
-        setup();
-        animate();
+        window.addEventListener('resize', setup);
+        setup(); animate();
     </script>
 </body>
 </html>
