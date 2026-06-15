@@ -6,45 +6,37 @@
     <title>MOTHLABS</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: monospace; }
-        .sanctuary-bg { position: fixed; top: 0; left: -10%; width: 120%; height: 100%; background: url('bg.jpg') no-repeat center center; background-size: cover; z-index: 1; transition: transform 0.6s ease-out; }
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.98) 100%); pointer-events: none; z-index: 10; }
-        canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 11; }
+        .sanctuary-bg { position: fixed; top: 0; left: -10%; width: 120%; height: 100%; background: url('bg.jpg') no-repeat center center; background-size: cover; z-index: 1; transition: transform 0.8s ease-out; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%); pointer-events: none; z-index: 10; }
+        canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 15; }
 
-        /* Cyber/Steampunk Terminal - Vertical Rounded Rectangle */
+        /* Cyber Terminal - Vertical Rectangle */
         #portalWrapper {
             position: fixed; top: 50%; left: 30%; transform: translate(-50%, -50%) scale(0);
-            width: 340px; height: 550px; background: rgba(2, 8, 2, 0.98);
+            width: 320px; height: 500px; background: rgba(5, 10, 5, 0.98);
             border: 2px solid #00ff41; z-index: 100; opacity: 0;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            box-shadow: 0 0 50px rgba(0,255,65,0.4);
-            border-radius: 40px;
-            transition: all 0.5s ease-out;
+            box-shadow: 0 0 40px rgba(0,255,65,0.3);
+            border-radius: 30px;
+            transition: all 1s ease-in-out;
             overflow: hidden;
         }
         #portalWrapper.active { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 
-        /* Liquid Spread Effect Overlay */
-        #rippleOverlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; z-index: 90; pointer-events: none; opacity: 0;
-        }
-
-        input { background: #000; border: 1px solid #00ff41; color: #00ff41; padding: 15px; width: 80%; text-align: center; border-radius: 10px; outline: none; margin-top: 20px; font-size: 14px;}
-        h2 { color: #00ff41; letter-spacing: 8px; margin: 0; text-shadow: 0 0 10px #00ff41; }
+        input { background: #000; border: 1px solid #00ff41; color: #00ff41; padding: 12px; width: 75%; text-align: center; border-radius: 5px; outline: none; margin-top: 20px; }
+        h2 { color: #00ff41; letter-spacing: 5px; margin: 0; text-shadow: 0 0 5px #00ff41; font-size: 18px; }
     </style>
 </head>
 <body>
     <div class="sanctuary-bg" id="bg"></div>
     <div class="overlay"></div>
-    <div id="rippleOverlay"></div>
     <canvas id="mainCanvas"></canvas>
 
     <div id="portalWrapper">
         <h2>MOTHLABS</h2>
-        <p style="color: #00ff41; font-size: 11px; margin-top: 20px; letter-spacing: 2px;">CONSCIOUSNESS SYNCED</p>
-        <div style="width: 80%; height: 1px; background: linear-gradient(to right, transparent, #00ff41, transparent); margin: 20px 0;"></div>
+        <p style="color: #00ff41; font-size: 9px; margin-top: 15px;">COMMUNION ESTABLISHED</p>
         <input type="password" placeholder="COMMUNION_KEY">
-        <p style="color: #444; font-size: 9px; margin-top: 30px;">[RE-ESTABLISHING HENRY_PROTOCOL...]</p>
+        <p style="color: #333; font-size: 8px; margin-top: 20px;">[HENRY_PROTOCOL_V.01]</p>
     </div>
 
     <script>
@@ -52,13 +44,12 @@
         const canvas = document.getElementById('mainCanvas');
         const ctx = canvas.getContext('2d');
         const portal = document.getElementById('portalWrapper');
-        const ripple = document.getElementById('rippleOverlay');
         
         let bugs = [];
         let stalks = [];
         const mouse = { x: null, y: null };
         let globalMoveX = 0;
-        let isTransitioning = false;
+        let transitioning = false;
 
         const lampX = () => window.innerWidth * 0.77;
         const lampY = () => window.innerHeight * 0.24;
@@ -66,7 +57,7 @@
         const plantY = () => window.innerHeight * 0.60;
 
         window.addEventListener('mousemove', (e) => {
-            if (isTransitioning) return;
+            if (transitioning) return;
             mouse.x = e.x; mouse.y = e.y;
             globalMoveX = (e.clientX / window.innerWidth - 0.5) * 45;
             bg.style.transform = `translateX(${-globalMoveX}px)`;
@@ -75,41 +66,41 @@
         function setup() {
             canvas.width = window.innerWidth; canvas.height = window.innerHeight;
             bugs = [new Bug(true)]; 
-            for (let i = 0; i < 22; i++) bugs.push(new Bug(false));
+            for (let i = 0; i < 15; i++) bugs.push(new Bug(false));
             
             stalks = [];
-            for (let i = 0; i < 18; i++) {
+            for (let i = 0; i < 12; i++) {
                 stalks.push({
-                    relativeX: (plantX() - 200 + (Math.random() * 400)), // Wider spread
-                    baseY: window.innerHeight * (0.80 + (Math.random() * 0.1)),
-                    h: 500 + Math.random() * 350, 
-                    w: 3 + Math.random() * 5, // Thicker variation
-                    stiffness: 0.03 + Math.random() * 0.05,
+                    relX: (plantX() - 100 + (Math.random() * 200)),
+                    baseY: window.innerHeight * (0.75 + (Math.random() * 0.05)),
+                    h: 300 + Math.random() * 200, 
+                    w: 2 + Math.random() * 2,
                     off: Math.random() * 1000,
-                    leafSide: Math.random() > 0.5 ? 1 : -1,
-                    currentPush: 0
+                    lSide: Math.random() > 0.5 ? 1 : -1,
+                    curP: 0
                 });
             }
         }
 
         class Bug {
-            constructor(isKey) {
-                this.isKey = isKey;
+            constructor(isBig) {
+                this.isBig = isBig;
                 this.x = lampX(); this.y = lampY();
-                this.size = isKey ? 5 : 1.2;
+                this.size = isBig ? 4 : 1;
                 this.vx = 0; this.vy = 0;
                 this.patience = 100;
                 this.returning = false;
-                this.state = 'active'; // orbiting, following, bloating
-                this.bloatScale = 1;
+                this.state = 'active';
             }
             update() {
                 if (this.state === 'bloating') {
-                    this.bloatScale += 0.1;
-                    this.size += 0.4;
-                    if (this.size > 40) this.explode();
+                    this.x += (mouse.x - this.x) * 0.2;
+                    this.y += (mouse.y - this.y) * 0.2;
+                    this.size += 0.3;
+                    if (this.size > 50) { portal.classList.add('active'); this.state = 'hidden'; }
                     return;
                 }
+                if (this.state === 'hidden') return;
 
                 let lx = lampX() - globalMoveX, ly = lampY();
                 let px = plantX() - globalMoveX, py = plantY();
@@ -117,97 +108,80 @@
 
                 if (mouse.x) {
                     let d = Math.hypot(mouse.x - this.x, mouse.y - this.y);
-                    if (this.isKey) {
-                        if (d < 300 && !this.returning) {
+                    if (this.isBig) {
+                        if (d < 250 && !this.returning) {
                             targetX = mouse.x; targetY = mouse.y;
-                            if (d > 140) this.patience -= 0.2;
+                            if (d > 120) this.patience -= 0.1;
                             else this.patience = Math.min(100, this.patience + 0.4);
-                        } else { this.patience -= 0.8; }
+                        } else { this.patience -= 0.6; }
                         if (this.patience <= 0) this.returning = true;
                         if (this.returning && Math.hypot(this.x - lx, this.y - ly) < 40) this.returning = false;
                     } else {
-                        targetX = lx + (Math.random()-0.5)*50;
-                        targetY = ly + (Math.random()-0.5)*50;
+                        targetX = lx + (Math.random()-0.5)*30; targetY = ly + (Math.random()-0.5)*30;
                     }
                 }
 
-                this.vx += (targetX - this.x) * (this.isKey ? 0.001 : 0.005) + (Math.random()-0.5) * 1.5;
-                this.vy += (targetY - this.y) * (this.isKey ? 0.001 : 0.005) + (Math.random()-0.5) * 1.5;
+                this.vx += (targetX - this.x) * (this.isBig ? 0.001 : 0.005) + (Math.random()-0.5) * 1.2;
+                this.vy += (targetY - this.y) * (this.isBig ? 0.001 : 0.005) + (Math.random()-0.5) * 1.2;
                 this.x += this.vx; this.y += this.vy;
                 this.vx *= 0.92; this.vy *= 0.92;
 
-                // Check for Settle on Cannabis
-                if (this.isKey && Math.hypot(this.x - px, this.y - py) < 60) {
+                if (this.isBig && Math.hypot(this.x - px, this.y - py) < 60 && this.patience > 50) {
                     this.state = 'bloating';
-                    isTransitioning = true;
+                    transitioning = true;
                 }
             }
-            explode() {
-                ripple.style.transition = "none";
-                ripple.style.opacity = "1";
-                ripple.style.background = "radial-gradient(circle at "+this.x+"px "+this.y+"px, #00ff41 0%, white 100%)";
-                setTimeout(() => {
-                    ripple.style.transition = "opacity 1.5s ease-out";
-                    ripple.style.opacity = "0";
-                    portal.classList.add('active');
-                }, 100);
-                this.state = 'dead';
-            }
             draw() {
-                if (this.state === 'dead') return;
-                ctx.fillStyle = this.isKey ? `rgba(255,255,255,${Math.max(0.2, this.patience/100)})` : 'rgba(255,255,180,0.15)';
+                if (this.state === 'hidden') return;
+                ctx.fillStyle = this.isBig ? `rgba(255,255,255,${this.patience/100})` : 'rgba(255,255,180,0.1)';
                 ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
-                if (this.isKey) { ctx.shadowBlur = 15; ctx.shadowColor = "white"; }
+                if (this.isBig) { ctx.shadowBlur = 10; ctx.shadowColor = "white"; }
             }
         }
 
         function drawVeil() {
             stalks.forEach(s => {
-                let anchoredX = s.relativeX - globalMoveX;
-                let targetPush = 0;
+                let ax = s.relX - globalMoveX;
+                let tP = 0;
                 if (mouse.x) {
-                    let dx = mouse.x - anchoredX;
+                    let dx = mouse.x - ax;
                     let dy = mouse.y - (s.baseY - s.h/2);
-                    let dist = Math.hypot(dx, dy);
-                    if (dist < 250) {
-                        targetPush = (dx > 0 ? -140 : 140) * (1 - dist/250);
-                    }
+                    let d = Math.hypot(dx, dy);
+                    if (d < 180) tP = (dx > 0 ? -70 : 70) * (1 - d/180);
                 }
-                s.currentPush += (targetPush - s.currentPush) * s.stiffness;
+                s.curP += (tP - s.curP) * 0.03; // Subtle stiffness
 
                 const time = Date.now() * 0.001;
-                const wind = Math.sin(time + s.off) * 8;
-                const endX = anchoredX + s.currentPush + wind;
+                const endX = ax + s.curP + Math.sin(time + s.off) * 8;
                 const endY = s.baseY - s.h;
 
-                ctx.strokeStyle = 'rgba(210, 180, 140, 0.6)'; // Tan
+                // Stalk - Dark Green-Tan blend
+                ctx.strokeStyle = 'rgba(20, 25, 15, 0.95)';
                 ctx.lineWidth = s.w;
                 ctx.beginPath();
-                ctx.moveTo(anchoredX, s.baseY);
-                ctx.quadraticCurveTo(anchoredX + s.currentPush * 0.5, s.baseY - s.h/2, endX, endY);
+                ctx.moveTo(ax, s.baseY);
+                ctx.quadraticCurveTo(ax + s.curP * 0.5, s.baseY - s.h/2, endX, endY);
                 ctx.stroke();
 
-                // One subtle drooping leaf per stalk
+                // 1 Single Leaf
                 ctx.beginPath();
-                let lx = anchoredX + (endX - anchoredX) * 0.7;
-                let ly = s.baseY - s.h * 0.7;
+                let lx = ax + (endX - ax) * 0.6;
+                let ly = s.baseY - s.h * 0.6;
                 ctx.moveTo(lx, ly);
-                ctx.quadraticCurveTo(lx + (s.leafSide * 20), ly - 10, lx + (s.leafSide * 15), ly + 45);
+                ctx.quadraticCurveTo(lx + (s.lSide * 30), ly - 10, lx + (s.lSide * 20), ly + 40);
                 ctx.stroke();
 
-                // Feathered Top (Fuzzy head)
-                ctx.fillStyle = 'rgba(210, 180, 140, 0.4)';
-                for(let i=0; i<3; i++) {
-                   ctx.beginPath();
-                   ctx.ellipse(endX + (i*2-2), endY, s.w + (3-i), 20 + (i*5), Math.atan2(endY - s.baseY, endX - anchoredX) + Math.PI/2, 0, Math.PI * 2);
-                   ctx.fill();
-                }
+                // Feathered Tip
+                ctx.fillStyle = 'rgba(25, 30, 20, 0.6)';
+                ctx.beginPath();
+                ctx.ellipse(endX, endY, s.w * 1.5, 20, Math.atan2(endY - s.baseY, endX - ax) + Math.PI/2, 0, Math.PI * 2);
+                ctx.fill();
             });
         }
 
         function animate() {
             ctx.clearRect(0,0,canvas.width,canvas.height);
-            drawVeil();
+            if (!transitioning) drawVeil();
             bugs.forEach(b => { b.update(); b.draw(); });
             requestAnimationFrame(animate);
         }
