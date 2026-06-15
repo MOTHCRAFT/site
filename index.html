@@ -5,32 +5,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MOTHLABS</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: monospace; }
         .sanctuary-bg { 
             position: fixed; top: 0; left: -10%; width: 120%; height: 100%; 
             background: url('bg.jpg') no-repeat center center; 
-            background-size: cover; z-index: 1; transition: transform 0.5s ease-out; 
+            background-size: cover; z-index: 1; transition: transform 0.6s ease-out; 
         }
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.96) 100%); pointer-events: none; z-index: 10; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.98) 100%); pointer-events: none; z-index: 10; }
         canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 11; }
-        #loginPanel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 320px; padding: 40px; background: rgba(0,0,0,0.95); border: 1px solid #00ff41; color: #fff; font-family: monospace; z-index: 100; display: none; text-align: center; box-shadow: 0 0 30px rgba(0,255,65,0.3); }
+
+        /* Steampunk / Cyber Login Portal */
+        #portalWrapper {
+            position: fixed; top: 50%; left: 30%; transform: translate(-50%, -50%) scale(0);
+            width: 320px; height: 500px; background: rgba(5, 10, 5, 0.95);
+            border: 2px solid #00ff41; z-index: 100; opacity: 0;
+            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 0 40px rgba(0,255,65,0.4);
+            clip-path: polygon(0 10%, 10% 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0 90%); /* Chipset Cut corners */
+        }
+        #portalWrapper.active { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        
+        /* Chipset Tracing Decoration */
+        .trace { position: absolute; background: #00ff41; opacity: 0.5; }
+        .t1 { top: 20px; left: 0; width: 40px; height: 1px; }
+        .t2 { bottom: 20px; right: 0; width: 40px; height: 1px; }
+
+        input { background: #000; border: 1px solid #00ff41; color: #00ff41; padding: 15px; width: 80%; text-align: center; letter-spacing: 2px; outline: none; margin-top: 20px; }
+        h2 { color: #00ff41; letter-spacing: 8px; margin: 0; text-shadow: 0 0 10px #00ff41; }
     </style>
 </head>
 <body>
     <div class="sanctuary-bg" id="bg"></div>
     <div class="overlay"></div>
     <canvas id="mainCanvas"></canvas>
-    <div id="loginPanel">
-        <h2 style="color: #00ff41; letter-spacing: 5px; margin-bottom: 20px;">MOTHLABS</h2>
-        <p style="font-size: 10px; color: #888;">IDENTITY CONFIRMED</p>
-        <input type="password" placeholder="COMMUNION ACCESS" style="background: #000; border: 1px solid #00ff41; color: #00ff41; padding: 12px; width: 80%; outline: none; margin-top: 10px;">
+
+    <div id="portalWrapper">
+        <div class="trace t1"></div>
+        <div class="trace t2"></div>
+        <h2>MOTHLABS</h2>
+        <p style="color: #00ff41; font-size: 10px; margin-top: 20px;">COMMUNION ESTABLISHED</p>
+        <p style="color: #444; font-size: 9px;">[TRACING_SOUL_FREQUENCY...]</p>
+        <input type="password" placeholder="ACCESS_KEY">
     </div>
 
     <script>
         const bg = document.getElementById('bg');
         const canvas = document.getElementById('mainCanvas');
         const ctx = canvas.getContext('2d');
-        const loginPanel = document.getElementById('loginPanel');
+        const portal = document.getElementById('portalWrapper');
         
         let bugs = [];
         let stalks = [];
@@ -52,30 +75,19 @@
         function setup() {
             canvas.width = window.innerWidth; canvas.height = window.innerHeight;
             bugs = [new Bug(true)]; 
-            for (let i = 0; i < 18; i++) bugs.push(new Bug(false));
+            for (let i = 0; i < 20; i++) bugs.push(new Bug(false));
             
             stalks = [];
-            for (let i = 0; i < 16; i++) {
-                let sH = 500 + Math.random() * 350;
-                let sLeaves = [];
-                // Generate 3-5 "shucks" or leaves per stalk
-                for(let j=0; j < 4; j++) {
-                    sLeaves.push({
-                        yOff: 0.3 + (Math.random() * 0.5), // height on stalk
-                        side: Math.random() > 0.5 ? 1 : -1,
-                        len: 30 + Math.random() * 50,
-                        droop: 20 + Math.random() * 40
-                    });
-                }
+            for (let i = 0; i < 18; i++) {
+                let sH = 450 + Math.random() * 400;
                 stalks.push({
-                    relativeX: (plantX() - 180 + (Math.random() * 360)), 
-                    baseY: window.innerHeight * (0.80 + (Math.random() * 0.08)),
+                    relativeX: (plantX() - 150 + (Math.random() * 300)), 
+                    baseY: window.innerHeight * (0.82 + (Math.random() * 0.05)),
                     h: sH, 
                     w: 2 + Math.random() * 3,
-                    stiffness: 0.04 + Math.random() * 0.08,
-                    drift: (Math.random() - 0.5) * 0.3,
+                    stiffness: 0.03 + Math.random() * 0.05,
                     off: Math.random() * 1000,
-                    leaves: sLeaves,
+                    leafSide: Math.random() > 0.5 ? 1 : -1,
                     currentPush: 0
                 });
             }
@@ -85,8 +97,8 @@
             constructor(isBig) {
                 this.isBig = isBig;
                 this.x = lampX(); this.y = lampY();
-                this.size = isBig ? 5 : 1;
-                this.vx = (Math.random()-0.5) * 5; this.vy = (Math.random()-0.5) * 5;
+                this.size = isBig ? 5 : 1.2;
+                this.vx = 0; this.vy = 0;
                 this.patience = 100;
                 this.returning = false;
             }
@@ -98,28 +110,28 @@
                 if (mouse.x) {
                     let d = Math.hypot(mouse.x - this.x, mouse.y - this.y);
                     if (this.isBig) {
-                        if (d < 300 && !this.returning) {
+                        if (d < 320 && !this.returning) {
                             targetX = mouse.x; targetY = mouse.y;
-                            if (d > 140) this.patience -= 0.18;
-                            else this.patience = Math.min(100, this.patience + 0.3);
-                        } else { this.patience -= 0.7; }
+                            if (d > 140) this.patience -= 0.15;
+                            else this.patience = Math.min(100, this.patience + 0.4);
+                        } else { this.patience -= 0.8; }
                         if (this.patience <= 0) this.returning = true;
-                        if (this.returning && Math.hypot(this.x - lx, this.y - ly) < 40) this.returning = false;
+                        if (this.returning && Math.hypot(this.x - lx, this.y - ly) < 30) this.returning = false;
                     } else if (d < 90) { targetX = mouse.x; targetY = mouse.y; }
                 }
 
-                this.vx += (targetX - this.x) * (this.isBig ? 0.0007 : 0.004) + (Math.random()-0.5) * 1.6;
-                this.vy += (targetY - this.y) * (this.isBig ? 0.0007 : 0.004) + (Math.random()-0.5) * 1.6;
+                this.vx += (targetX - this.x) * (this.isBig ? 0.001 : 0.005) + (Math.random()-0.5) * 1.5;
+                this.vy += (targetY - this.y) * (this.isBig ? 0.001 : 0.005) + (Math.random()-0.5) * 1.5;
                 this.x += this.vx; this.y += this.vy;
                 this.vx *= 0.92; this.vy *= 0.92;
 
                 if (this.isBig && Math.hypot(this.x - px, this.y - py) < 80) {
                     portalProgress++;
-                    if (portalProgress > 100) loginPanel.style.display = 'block';
+                    if (portalProgress > 120) portal.classList.add('active');
                 } else if (this.isBig) { portalProgress = 0; }
             }
             draw() {
-                ctx.fillStyle = this.isBig ? `rgba(255,255,255,${Math.max(0.1, this.patience/100)})` : 'rgba(255,255,180,0.1)';
+                ctx.fillStyle = this.isBig ? `rgba(255,255,255,${Math.max(0.1, this.patience/100)})` : 'rgba(255,255,180,0.15)';
                 ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill();
             }
         }
@@ -128,48 +140,42 @@
             stalks.forEach(s => {
                 let anchoredX = s.relativeX - globalMoveX;
                 let targetPush = 0;
+                
+                // Full-Height Y-Reactivity
                 if (mouse.x) {
                     let dx = mouse.x - anchoredX;
-                    let dy = mouse.y - (s.baseY - s.h/2);
+                    let dy = mouse.y - (s.baseY - s.h/2); // Center of stalk
                     let dist = Math.hypot(dx, dy);
                     if (dist < 200) {
-                        targetPush = (dx > 0 ? -90 : 90) * (1 - dist/200);
+                        targetPush = (dx > 0 ? -120 : 120) * (1 - dist/200);
                     }
                 }
                 s.currentPush += (targetPush - s.currentPush) * s.stiffness;
 
                 const time = Date.now() * 0.001;
-                const wind = Math.sin(time + s.off) * 15;
-                
-                const startX = anchoredX;
-                const startY = s.baseY;
-                const endX = anchoredX + s.currentPush + wind + (s.drift * 150);
+                const wind = Math.sin(time + s.off) * 10;
+                const endX = anchoredX + s.currentPush + wind;
                 const endY = s.baseY - s.h;
 
-                // 1. Draw Stalk
-                ctx.strokeStyle = 'rgba(210, 180, 140, 0.7)'; // Tan for debug
+                ctx.strokeStyle = 'rgba(210, 180, 140, 0.6)'; // Tan
                 ctx.lineWidth = s.w;
                 ctx.beginPath();
-                ctx.moveTo(startX, startY);
-                const cpX = startX + s.currentPush * 0.5;
-                const cpY = startY - s.h/2;
-                ctx.quadraticCurveTo(cpX, cpY, endX, endY);
+                ctx.moveTo(anchoredX, s.baseY);
+                ctx.quadraticCurveTo(anchoredX + s.currentPush * 0.5, s.baseY - s.h/2, endX, endY);
                 ctx.stroke();
 
-                // 2. Draw Shucks (Leaves)
-                s.leaves.forEach(l => {
-                    let lx = startX + (endX - startX) * l.yOff;
-                    let ly = startY + (endY - startY) * l.yOff;
-                    ctx.beginPath();
-                    ctx.moveTo(lx, ly);
-                    ctx.quadraticCurveTo(lx + (l.side * l.len), ly + l.droop, lx + (l.side * l.len * 0.8), ly + l.droop + 10);
-                    ctx.stroke();
-                });
-
-                // 3. Draw Fuzzy Head
-                ctx.fillStyle = 'rgba(210, 180, 140, 0.4)';
+                // Draw 1-2 Organic Drooping Leaves
                 ctx.beginPath();
-                ctx.ellipse(endX, endY, s.w * 2, 22 + (s.w * 3), Math.atan2(endY - startY, endX - startX) + Math.PI/2, 0, Math.PI * 2);
+                let lx = anchoredX + (endX - anchoredX) * 0.6;
+                let ly = s.baseY - s.h * 0.6;
+                ctx.moveTo(lx, ly);
+                ctx.quadraticCurveTo(lx + (s.leafSide * 40), ly - 20, lx + (s.leafSide * 35), ly + 40);
+                ctx.stroke();
+
+                // Draw Fuzzy Top
+                ctx.fillStyle = 'rgba(210, 180, 140, 0.3)';
+                ctx.beginPath();
+                ctx.ellipse(endX, endY, s.w * 1.5, 25, Math.atan2(endY - s.baseY, endX - anchoredX) + Math.PI/2, 0, Math.PI * 2);
                 ctx.fill();
             });
         }
