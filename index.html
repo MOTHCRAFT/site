@@ -7,13 +7,26 @@
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: monospace; }
         #loadingScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; transition: opacity 2.5s ease-in-out; }
-        .sanctuary-bg { position: fixed; top: 0; left: -10%; width: 120%; height: 100%; background: url('bg.jpg') no-repeat center center; background-size: cover; z-index: 1; transition: transform 0.7s cubic-bezier(0.1, 0.4, 0.2, 1); }
+        .sanctuary-bg { position: fixed; top: 0; left: -10%; width: 120%; height: 100%; background: url('bg.jpg') no-repeat center center; background-size: cover; z-index: 1; transition: transform 0.8s ease-out; }
         .frosted-filter { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 100%); opacity: 0.5; mix-blend-mode: overlay; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%); pointer-events: none; z-index: 10; }
         canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 15; }
-        #portalWrapper { position: fixed; top: 50%; left: 32%; transform: translate(-50%, -50%); width: 320px; z-index: 100; opacity: 0; display: flex; flex-direction: column; align-items: center; pointer-events: none; transition: opacity 2s ease-in; }
+
+        /* Faded Minimalist Panels */
+        #portalWrapper {
+            position: fixed; top: 50%; left: 32%; transform: translate(-50%, -50%);
+            width: 260px; z-index: 100; opacity: 0; display: flex; flex-direction: column; 
+            align-items: center; pointer-events: none; transition: opacity 3s ease-in;
+            background: radial-gradient(circle, rgba(5,10,5,0.9) 30%, rgba(5,10,5,0) 100%); /* Fade-out edges */
+            padding: 50px;
+        }
         #portalWrapper.active { opacity: 1; pointer-events: auto; }
-        .field { background: rgba(0,0,0,0.6); border: 1px solid rgba(200, 180, 140, 0.05); color: rgba(200, 180, 140, 0.3); padding: 22px; width: 80%; border-radius: 20px; outline: none; margin-bottom: 25px; text-align: center; }
+        .field { 
+            background: rgba(255,255,255,0.03); border: none; border-bottom: 1px solid rgba(200, 180, 140, 0.1); 
+            color: rgba(200, 180, 140, 0.4); padding: 15px; width: 90%; outline: none; margin-bottom: 20px; 
+            text-align: center; font-size: 12px; transition: all 1s;
+        }
+        .field:focus { border-bottom: 1px solid rgba(200, 180, 140, 0.3); background: rgba(255,255,255,0.05); }
     </style>
 </head>
 <body>
@@ -52,18 +65,15 @@
                 return { x: (vW/2)-(moveX)+(bgW*(imgX_pct-0.5)), y: vH*imgY_pct };
             }
 
-            class Stalk {
+            class Reed {
                 constructor() {
                     const spread = (Math.random() - 0.5) * 0.48;
                     this.relX = PLANT_IMG_X + spread; this.relY = PLANT_IMG_Y + (Math.random() * 0.08);
-                    this.hMult = 0.3 + (Math.random() * 0.25); this.off = Math.random() * 1000;
-                    this.w = 1.5 + (Math.random() * 2.5);
-                    this.baseLean = (Math.random() - 0.5) * 0.4;
+                    this.hMult = 0.28 + (Math.random() * 0.22); this.off = Math.random() * 1000;
+                    this.w = 1.5 + (Math.random() * 2.5); this.baseLean = (Math.random() - 0.5) * 0.4;
                     const dist = Math.abs(this.relX - LAMP_IMG_X);
                     this.light = Math.max(0.05, 1 - (dist * 1.7));
                     this.leafSide = Math.random() > 0.5 ? 1 : -1;
-                    
-                    // SKELETAL NODES (Inertia chain)
                     this.nodes = [{x:0, y:0}, {x:0, y:0}, {x:0, y:0}, {x:0, y:0}];
                     this.curPush = 0;
                 }
@@ -71,12 +81,16 @@
                     const pos = getScreenCoords(this.relX, this.relY), h = window.innerHeight * this.hMult;
                     let tP = 0;
                     if (mouse.x) {
-                        let dx = mouse.x - pos.x, d = Math.hypot(dx, mouse.y - (pos.y - h/2));
-                        if (d < 180) tP = (dx > 0 ? -110 : 110) * (1 - d/180);
+                        let dx = mouse.x - pos.x, dy = mouse.y - pos.y;
+                        let d = Math.hypot(dx, mouse.y - (pos.y - h/2));
+                        // Heavier resistance math
+                        if (d < 180) {
+                            let resistance = Math.max(0.1, Math.min(1, (pos.y - mouse.y) / h)); 
+                            tP = (dx > 0 ? -70 : 70) * (1 - d/180) * (1 - resistance * 0.6);
+                        }
                     }
-                    // React to Pan Velocity (Wind of the camera)
-                    tP += panVel * 15;
-                    this.curPush += (tP - this.curPush) * 0.05;
+                    tP += panVel * 12;
+                    this.curPush += (tP - this.curPush) * 0.03;
 
                     let grad = ctx.createLinearGradient(0, pos.y, 0, pos.y - h);
                     grad.addColorStop(0, 'rgba(0,0,0,0)');
@@ -87,18 +101,16 @@
                     let px = pos.x, py = pos.y;
                     for (let j = 1; j < this.nodes.length; j++) {
                         let t = j / (this.nodes.length - 1);
-                        const wind = Math.sin(Date.now() * 0.0006 + this.off + j) * (10 * t);
-                        // The "Chain" logic: top nodes lean more than bottom
-                        let targetX = pos.x + (Math.pow(t, 1.6) * (this.curPush + (this.baseLean * 80))) + wind;
+                        const wind = Math.sin(Date.now() * 0.0006 + this.off + j) * (8 * t);
+                        // Segmented lean: top is more responsive than bottom
+                        let targetX = pos.x + (Math.pow(t, 1.8) * (this.curPush + (this.baseLean * 80))) + wind;
                         let targetY = pos.y - (h * t);
                         
-                        // Wobble smoothing
-                        this.nodes[j].x += (targetX - this.nodes[j].x) * (0.1 / t);
+                        this.nodes[j].x += (targetX - this.nodes[j].x) * (0.08 / t);
                         this.nodes[j].y = targetY;
 
                         ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(this.nodes[j].x, this.nodes[j].y); ctx.stroke();
                         
-                        // Husks & Leaves
                         if (j === 2) {
                             ctx.save(); ctx.translate(this.nodes[j].x, this.nodes[j].y);
                             ctx.fillStyle = `rgba(10, 15, 8, ${this.light})`;
@@ -110,7 +122,6 @@
                         }
                         px = this.nodes[j].x; py = this.nodes[j].y;
                     }
-                    // Plume
                     ctx.fillStyle = `rgba(120, 110, 90, ${this.light * 0.3})`;
                     for(let i=0; i<3; i++) {
                         ctx.beginPath(); ctx.ellipse(px + (i*2-2), py, this.w + i, 16 + (i*4), Math.atan2(py - pos.y, px - pos.x) + Math.PI/2, 0, Math.PI * 2); ctx.fill();
@@ -142,10 +153,19 @@
                     let tX = lp.x, tY = lp.y;
                     if (mouse.x) {
                         let d = Math.hypot(mouse.x - this.x, mouse.y - this.y);
+                        // ENTERING THE GRASS: Other bugs lose interest
+                        let inGrass = mouse.x < window.innerWidth * 0.45;
+
                         if (this.isKey) {
-                            if (d < 320) { tX = mouse.x; tY = mouse.y; this.patience = Math.min(100, this.patience + 0.1); }
-                            else { this.patience -= 0.25; if (this.patience <= 0) { this.x = lp.x; this.y = lp.y; this.patience = 100; } }
-                        } else if (this.type !== 'gnat' && d < 70) { tX = mouse.x; tY = mouse.y; }
+                            if (d < 160) { // Tightened Walk-the-Dog radius
+                                tX = mouse.x; tY = mouse.y; this.patience = Math.min(100, this.patience + 0.1);
+                            } else {
+                                this.patience -= 0.3; 
+                                if (this.patience <= 0) { this.x = lp.x; this.y = lp.y; this.patience = 100; }
+                            }
+                        } else if (!inGrass && this.type !== 'gnat' && d < 70) {
+                            tX = mouse.x; tY = mouse.y;
+                        }
                     }
                     let acc = this.isKey ? 0.0002 : (this.type === 'gnat' ? 0.007 : 0.0006);
                     this.vx += (tX - this.x) * acc + (Math.random()-0.5) * (this.type === 'gnat' ? 1.0 : 0.25);
@@ -181,14 +201,14 @@
                 for(let i=0; i<6; i++) bugs.push(new Bug(false, 'moth'));
                 for(let i=0; i<6; i++) bugs.push(new Bug(false, 'crane'));
                 for(let i=0; i<25; i++) bugs.push(new Bug(false, 'gnat'));
-                stalks = Array.from({length: 40}, () => new Stalk());
+                stalks = Array.from({length: 40}, () => new Reed());
             }
 
             function animate() {
                 ctx.clearRect(0,0,canvas.width,canvas.height);
                 stalks.forEach(s => s.draw());
                 bugs.forEach(b => { b.update(); b.draw(); });
-                panVel *= 0.9; // Decay the pan impact
+                panVel *= 0.9;
                 requestAnimationFrame(animate);
             }
             window.addEventListener('resize', setup); setup(); animate();
