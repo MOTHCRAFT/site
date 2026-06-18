@@ -7,7 +7,7 @@
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: monospace; }
         #loadingScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; transition: opacity 2.5s ease-in-out; }
-        .sanctuary-bg { position: fixed; top: 0; left: -10%; width: 120%; height: 100%; background: url('bg.jpg') no-repeat center center; background-size: cover; z-index: 1; transition: transform 0.8s ease-out; }
+        .sanctuary-bg { position: fixed; top: 0; left: -10%; width: 120%; height: 100%; background: url('bg.jpg') no-repeat center center; background-size: cover; z-index: 1; transition: transform 0.7s cubic-bezier(0.1, 0.4, 0.2, 1); }
         .frosted-filter { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.5) 100%); opacity: 0.5; mix-blend-mode: overlay; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%); pointer-events: none; z-index: 10; }
         canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 15; }
@@ -34,7 +34,7 @@
             setTimeout(() => document.getElementById('loadingScreen').remove(), 2500);
 
             const bg = document.getElementById('bg'), canvas = document.getElementById('mainCanvas'), ctx = canvas.getContext('2d'), portal = document.getElementById('portalWrapper');
-            let bugs = [], stalks = [], mouse = { x: null, y: null }, moveX = 0, transitioning = false;
+            let bugs = [], stalks = [], mouse = { x: null, y: null }, moveX = 0, lastMoveX = 0, panVel = 0, transitioning = false;
 
             const LAMP_IMG_X = 0.745, LAMP_IMG_Y = 0.22, PLANT_IMG_X = 0.32, PLANT_IMG_Y = 0.73;
 
@@ -42,6 +42,8 @@
                 if (transitioning) return;
                 mouse.x = e.x; mouse.y = e.y;
                 moveX = (e.clientX / window.innerWidth - 0.5) * 45;
+                panVel = moveX - lastMoveX;
+                lastMoveX = moveX;
                 bg.style.transform = `translateX(${-moveX}px)`;
             });
 
@@ -53,61 +55,65 @@
             class Stalk {
                 constructor() {
                     const spread = (Math.random() - 0.5) * 0.48;
-                    this.relX = PLANT_IMG_X + spread; 
-                    this.relY = PLANT_IMG_Y + (Math.random() * 0.08);
-                    this.hMult = 0.3 + (Math.random() * 0.25); 
-                    this.off = Math.random() * 1000;
-                    this.curPush = 0;
+                    this.relX = PLANT_IMG_X + spread; this.relY = PLANT_IMG_Y + (Math.random() * 0.08);
+                    this.hMult = 0.3 + (Math.random() * 0.25); this.off = Math.random() * 1000;
                     this.w = 1.5 + (Math.random() * 2.5);
                     this.baseLean = (Math.random() - 0.5) * 0.4;
-                    const distFromLight = Math.abs(this.relX - LAMP_IMG_X);
-                    this.light = Math.max(0.05, 1 - (distFromLight * 1.7));
+                    const dist = Math.abs(this.relX - LAMP_IMG_X);
+                    this.light = Math.max(0.05, 1 - (dist * 1.7));
                     this.leafSide = Math.random() > 0.5 ? 1 : -1;
+                    
+                    // SKELETAL NODES (Inertia chain)
+                    this.nodes = [{x:0, y:0}, {x:0, y:0}, {x:0, y:0}, {x:0, y:0}];
+                    this.curPush = 0;
                 }
                 draw() {
                     const pos = getScreenCoords(this.relX, this.relY), h = window.innerHeight * this.hMult;
                     let tP = 0;
                     if (mouse.x) {
                         let dx = mouse.x - pos.x, d = Math.hypot(dx, mouse.y - (pos.y - h/2));
-                        if (d < 180) tP = (mouse.x - pos.x > 0 ? -110 : 110) * (1 - d/180);
+                        if (d < 180) tP = (dx > 0 ? -110 : 110) * (1 - d/180);
                     }
-                    this.curPush += (tP - this.curPush) * 0.04;
+                    // React to Pan Velocity (Wind of the camera)
+                    tP += panVel * 15;
+                    this.curPush += (tP - this.curPush) * 0.05;
 
                     let grad = ctx.createLinearGradient(0, pos.y, 0, pos.y - h);
                     grad.addColorStop(0, 'rgba(0,0,0,0)');
                     grad.addColorStop(0.2, `rgba(10, 15, 8, ${this.light * 0.95})`);
                     grad.addColorStop(1, `rgba(160, 145, 100, ${this.light * 0.6})`); 
-                    
                     ctx.strokeStyle = grad; ctx.lineWidth = this.w;
-                    let px = pos.x, py = pos.y;
 
-                    // 3-Segmented Construction
-                    for (let j = 1; j <= 3; j++) {
-                        let t = j / 3;
-                        let wind = Math.sin(Date.now() * 0.0005 + this.off + j) * (10 * t);
-                        let targetX = pos.x + (Math.pow(t, 1.4) * (this.curPush + (this.baseLean * 80))) + wind;
+                    let px = pos.x, py = pos.y;
+                    for (let j = 1; j < this.nodes.length; j++) {
+                        let t = j / (this.nodes.length - 1);
+                        const wind = Math.sin(Date.now() * 0.0006 + this.off + j) * (10 * t);
+                        // The "Chain" logic: top nodes lean more than bottom
+                        let targetX = pos.x + (Math.pow(t, 1.6) * (this.curPush + (this.baseLean * 80))) + wind;
                         let targetY = pos.y - (h * t);
                         
-                        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(targetX, targetY); ctx.stroke();
+                        // Wobble smoothing
+                        this.nodes[j].x += (targetX - this.nodes[j].x) * (0.1 / t);
+                        this.nodes[j].y = targetY;
+
+                        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(this.nodes[j].x, this.nodes[j].y); ctx.stroke();
                         
-                        // Joint Husks & Drooping Leaves
-                        if (j < 3) {
-                            ctx.save(); ctx.translate(targetX, targetY);
-                            // Draw small node/husk
+                        // Husks & Leaves
+                        if (j === 2) {
+                            ctx.save(); ctx.translate(this.nodes[j].x, this.nodes[j].y);
                             ctx.fillStyle = `rgba(10, 15, 8, ${this.light})`;
                             ctx.beginPath(); ctx.arc(0,0, this.w*0.8, 0, Math.PI*2); ctx.fill();
-                            // Draw Drooping Shuck
                             ctx.beginPath(); ctx.moveTo(0,0); 
                             ctx.quadraticCurveTo(this.leafSide * 35, -5, this.leafSide * 25, 55);
                             ctx.strokeStyle = `rgba(10, 15, 8, ${this.light})`; ctx.lineWidth = this.w * 0.5; ctx.stroke();
                             ctx.restore();
                         }
-                        px = targetX; py = targetY;
+                        px = this.nodes[j].x; py = this.nodes[j].y;
                     }
-                    // Final Plume (Seed Head)
+                    // Plume
                     ctx.fillStyle = `rgba(120, 110, 90, ${this.light * 0.3})`;
                     for(let i=0; i<3; i++) {
-                        ctx.beginPath(); ctx.ellipse(px + (i*2-2), py, this.w + i, 16 + (i*4), Math.atan2(py - pos.y, px - (pos.x+this.curPush)) + Math.PI/2, 0, Math.PI * 2); ctx.fill();
+                        ctx.beginPath(); ctx.ellipse(px + (i*2-2), py, this.w + i, 16 + (i*4), Math.atan2(py - pos.y, px - pos.x) + Math.PI/2, 0, Math.PI * 2); ctx.fill();
                     }
                 }
             }
@@ -137,7 +143,7 @@
                     if (mouse.x) {
                         let d = Math.hypot(mouse.x - this.x, mouse.y - this.y);
                         if (this.isKey) {
-                            if (d < 300) { tX = mouse.x; tY = mouse.y; this.patience = Math.min(100, this.patience + 0.1); }
+                            if (d < 320) { tX = mouse.x; tY = mouse.y; this.patience = Math.min(100, this.patience + 0.1); }
                             else { this.patience -= 0.25; if (this.patience <= 0) { this.x = lp.x; this.y = lp.y; this.patience = 100; } }
                         } else if (this.type !== 'gnat' && d < 70) { tX = mouse.x; tY = mouse.y; }
                     }
@@ -182,6 +188,7 @@
                 ctx.clearRect(0,0,canvas.width,canvas.height);
                 stalks.forEach(s => s.draw());
                 bugs.forEach(b => { b.update(); b.draw(); });
+                panVel *= 0.9; // Decay the pan impact
                 requestAnimationFrame(animate);
             }
             window.addEventListener('resize', setup); setup(); animate();
