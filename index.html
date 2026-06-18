@@ -39,158 +39,168 @@
     </div>
 
     <script>
-        // --- MASTER CALIBRATION ---
-        const DEBUG_MODE = true; 
-        // --------------------------
+        window.onload = function() {
+            // --- MASTER CALIBRATION ---
+            const DEBUG_MODE = true; 
+            // --------------------------
 
-        const bg = document.getElementById('bg'), canvas = document.getElementById('mainCanvas'), ctx = canvas.getContext('2d'), portal = document.getElementById('portalWrapper');
-        let bugs = [], stalks = [], mouse = { x: null, y: null }, moveX = 0, transitioning = false;
+            const bg = document.getElementById('bg'), canvas = document.getElementById('mainCanvas'), ctx = canvas.getContext('2d'), portal = document.getElementById('portalWrapper');
+            let bugs = [], stalks = [], mouse = { x: null, y: null }, moveX = 0, transitioning = false;
 
-        const LAMP_IMG_X = 0.745, LAMP_IMG_Y = 0.21; 
-        const PLANT_IMG_X = 0.32, PLANT_IMG_Y = 0.73;
+            const LAMP_IMG_X = 0.745, LAMP_IMG_Y = 0.21; 
+            const PLANT_IMG_X = 0.32, PLANT_IMG_Y = 0.73;
 
-        window.addEventListener('mousemove', (e) => {
-            if (transitioning) return;
-            mouse.x = e.x; mouse.y = e.y;
-            moveX = (e.clientX / window.innerWidth - 0.5) * 45;
-            bg.style.transform = `translateX(${-moveX}px)`;
-        });
+            window.addEventListener('mousemove', (e) => {
+                if (transitioning) return;
+                mouse.x = e.x; mouse.y = e.y;
+                moveX = (e.clientX / window.innerWidth - 0.5) * 45;
+                bg.style.transform = `translateX(${-moveX}px)`;
+            });
 
-        function getScreenCoords(imgX_pct, imgY_pct) {
-            const vW = window.innerWidth, vH = window.innerHeight;
-            const bgW = vW * 1.2;
-            const activeX = (vW / 2) - (moveX) + (bgW * (imgX_pct - 0.5));
-            const activeY = vH * imgY_pct;
-            return { x: activeX, y: activeY };
-        }
-
-        class Reed {
-            constructor(i) {
-                // CLUSTER LOGIC: Gaussian-ish distribution around the plant center
-                const spread = (Math.random() - 0.5);
-                this.relX = PLANT_IMG_X + (spread * spread * spread * 0.5); // Centers density at the plant
-                this.relY = PLANT_IMG_Y + (Math.random() * 0.08);
-                this.hMult = 0.35 + (Math.random() * 0.22); 
-                this.off = Math.random() * 1000;
-                this.curPush = 0;
-                this.segments = 3;
-                this.baseLean = (Math.random() - 0.5) * 0.4;
-                
-                this.leaves = [];
-                const leafCount = Math.floor(Math.random() * 3);
-                for(let l=0; l<leafCount; l++) {
-                    this.leaves.push({
-                        yPos: 0.3 + (Math.random() * 0.4),
-                        side: Math.random() > 0.5 ? 1 : -1,
-                        droop: 25 + Math.random() * 45,
-                        len: 20 + Math.random() * 40
-                    });
-                }
+            function getScreenCoords(imgX_pct, imgY_pct) {
+                const vW = window.innerWidth, vH = window.innerHeight;
+                const bgW = vW * 1.2;
+                const activeX = (vW / 2) - (moveX) + (bgW * (imgX_pct - 0.5));
+                const activeY = vH * imgY_pct;
+                return { x: activeX, y: activeY };
             }
-            draw() {
-                const pos = getScreenCoords(this.relX, this.relY);
-                const h = window.innerHeight * this.hMult;
-                let tP = 0;
-                if (mouse.x) {
-                    let dx = mouse.x - pos.x, d = Math.hypot(dx, mouse.y - (pos.y - h/2));
-                    if (d < 180) tP = (dx > 0 ? -140 : 140) * (1 - d/180);
-                }
-                this.curPush += (tP - this.curPush) * 0.05;
 
-                let mainColor = DEBUG_MODE ? 'rgba(210, 180, 140, 0.7)' : 'rgba(12, 18, 8, 0.98)';
-                let accentColor = DEBUG_MODE ? 'rgba(210, 180, 140, 0.4)' : 'rgba(180, 160, 120, 0.3)';
-
-                let grad = ctx.createLinearGradient(0, pos.y, 0, pos.y - h);
-                grad.addColorStop(0, 'rgba(0,0,0,0)');
-                grad.addColorStop(0.2, mainColor);
-                grad.addColorStop(1, DEBUG_MODE ? mainColor : 'rgba(150, 140, 100, 0.6)'); 
-                
-                ctx.strokeStyle = grad; ctx.lineWidth = 2.5 + (Math.random() * 1.5);
-                let px = pos.x, py = pos.y;
-                
-                for (let j = 1; j <= this.segments; j++) {
-                    let t = j / this.segments;
-                    const wind = Math.sin(Date.now() * 0.0005 + this.off + j) * (10 * t);
-                    let targetX = pos.x + (Math.pow(t, 1.4) * (this.curPush + (this.baseLean * 80))) + wind;
-                    let targetY = pos.y - (h * t);
-                    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(targetX, targetY); ctx.stroke();
-                    
-                    if (j < 3) {
-                        this.leaves.forEach(leaf => {
-                           if (Math.abs(leaf.yPos - t) < 0.2) {
-                               ctx.save(); ctx.translate(targetX, targetY);
-                               ctx.beginPath(); ctx.moveTo(0,0);
-                               ctx.quadraticCurveTo(leaf.side * leaf.len, -5, leaf.side * (leaf.len*0.7), leaf.droop);
-                               ctx.strokeStyle = mainColor; ctx.lineWidth = 1.2; ctx.stroke();
-                               ctx.restore();
-                           }
+            class Reed {
+                constructor() {
+                    // HUDDLE LOGIC: Dense clustering using power distribution
+                    const spread = (Math.random() - 0.5);
+                    this.relX = PLANT_IMG_X + (spread * spread * spread * 0.4); 
+                    this.relY = PLANT_IMG_Y + (Math.random() * 0.08);
+                    this.hMult = 0.35 + (Math.random() * 0.25); 
+                    this.off = Math.random() * 1000;
+                    this.curPush = 0;
+                    this.segments = 3;
+                    this.baseLean = (Math.random() - 0.5) * 0.4;
+                    this.leaves = [];
+                    const leafCount = Math.floor(Math.random() * 3);
+                    for(let l=0; l<leafCount; l++) {
+                        this.leaves.push({
+                            yPos: 0.3 + (Math.random() * 0.4),
+                            side: Math.random() > 0.5 ? 1 : -1,
+                            droop: 30 + Math.random() * 40,
+                            len: 20 + Math.random() * 35
                         });
                     }
-                    px = targetX; py = targetY;
                 }
-                ctx.fillStyle = accentColor;
-                ctx.beginPath(); ctx.ellipse(px, py, 4, 20, Math.atan2(py - pos.y, px - pos.x) + Math.PI/2, 0, Math.PI * 2); ctx.fill();
-            }
-        }
+                draw() {
+                    const pos = getScreenCoords(this.relX, this.relY);
+                    const h = window.innerHeight * this.hMult;
+                    let tP = 0;
+                    if (mouse.x) {
+                        let dx = mouse.x - pos.x, d = Math.hypot(dx, mouse.y - (pos.y - h/2));
+                        if (d < 180) tP = (dx > 0 ? -140 : 140) * (1 - d/180);
+                    }
+                    this.curPush += (tP - this.curPush) * 0.05;
 
-        class Moth {
-            constructor(isKey, type = 'moth') {
-                this.isKey = isKey; this.type = type;
-                const p = getScreenCoords(LAMP_IMG_X, LAMP_IMG_Y);
-                this.x = p.x; this.y = p.y;
-                this.vx = 0; this.vy = 0; this.bloat = 0; this.state = 'active'; this.patience = 100;
-                this.size = isKey ? 4.5 : (type === 'gnat' ? 0.7 : 1.8);
-            }
-            update() {
-                const lp = getScreenCoords(LAMP_IMG_X, LAMP_IMG_Y);
-                const pp = getScreenCoords(PLANT_IMG_X, 0.40);
-                if (this.state === 'bloating') {
-                    this.x += (mouse.x - this.x) * 0.15; this.y += (mouse.y - this.y) * 0.15;
-                    this.bloat += 0.25; if (this.bloat > 40) { portal.classList.add('active'); this.state = 'hidden'; transitioning = true; }
-                    return;
-                }
-                if (this.state === 'hidden') return;
-                let tX = lp.x, tY = lp.y;
-                if (mouse.x) {
-                    let d = Math.hypot(mouse.x - this.x, mouse.y - this.y);
-                    if (this.isKey) {
-                        if (d < 300) { tX = mouse.x; tY = mouse.y; this.patience = Math.min(100, this.patience + 0.2); }
-                        else { this.patience -= 0.5; if (this.patience <= 0) { this.x = lp.x; this.y = lp.y; this.patience = 100; } }
-                    } else { tX = lp.x + (Math.random()-0.5)*120; tY = lp.y + (Math.random()-0.5)*120; }
-                }
-                let accel = this.isKey ? 0.0003 : (this.type === 'gnat' ? 0.008 : 0.0012);
-                this.vx += (tX - this.x) * accel + (Math.random()-0.5) * 0.3;
-                this.vy += (tY - this.y) * accel + (Math.random()-0.5) * 0.3;
-                this.x += this.vx; this.y += this.vy;
-                this.vx *= 0.95; this.vy *= 0.95;
-                if (this.isKey && Math.hypot(this.x - pp.x, this.y - pp.y) < 60 && this.patience > 80) this.state = 'bloating';
-            }
-            draw() {
-                if (this.state === 'hidden') return;
-                ctx.save(); ctx.translate(this.x, this.y);
-                let flap = Math.sin(Date.now() * 0.035) * (this.isKey ? 10 : 4);
-                
-                // BUG GLOW LOGIC: Makes them visible in front of the globe
-                ctx.shadowBlur = 4; ctx.shadowColor = "rgba(255, 255, 200, 0.5)";
-                
-                ctx.fillStyle = this.isKey ? `rgba(255,255,255,${this.patience/100})` : 'rgba(255, 255, 220, 0.3)';
-                ctx.beginPath(); ctx.ellipse(0, 0, 1.5+this.bloat/12, 3+this.bloat/10, 0, 0, Math.PI*2); ctx.fill();
-                if (this.type !== 'gnat') {
-                    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-8-this.bloat/4, -3+flap); ctx.lineTo(-3,-7); ctx.fill();
-                    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(8+this.bloat/4, -3+flap); ctx.lineTo(3,-7); ctx.fill();
-                }
-                ctx.restore();
-            }
-        }
+                    let mainColor = DEBUG_MODE ? 'rgba(210, 180, 140, 0.7)' : 'rgba(12, 18, 8, 0.98)';
+                    let accentColor = DEBUG_MODE ? 'rgba(210, 180, 140, 0.4)' : 'rgba(180, 160, 120, 0.3)';
 
-        function animate() {
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            stalks.forEach(s => s.draw());
-            bugs.forEach(b => { b.update(); b.draw(); });
-            requestAnimationFrame(animate);
-        }
+                    let grad = ctx.createLinearGradient(0, pos.y, 0, pos.y - h);
+                    grad.addColorStop(0, 'rgba(0,0,0,0)');
+                    grad.addColorStop(0.2, mainColor);
+                    grad.addColorStop(1, DEBUG_MODE ? mainColor : 'rgba(150, 140, 100, 0.6)'); 
+                    
+                    ctx.strokeStyle = grad; ctx.lineWidth = 2.5 + (Math.random() * 1.5);
+                    let px = pos.x, py = pos.y;
+                    
+                    for (let j = 1; j <= this.segments; j++) {
+                        let t = j / this.segments;
+                        const wind = Math.sin(Date.now() * 0.0005 + this.off + j) * (10 * t);
+                        let targetX = pos.x + (Math.pow(t, 1.4) * (this.curPush + (this.baseLean * 80))) + wind;
+                        let targetY = pos.y - (h * t);
+                        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(targetX, targetY); ctx.stroke();
+                        if (j < 3) {
+                            this.leaves.forEach(leaf => {
+                               if (Math.abs(leaf.yPos - t) < 0.2) {
+                                   ctx.save(); ctx.translate(targetX, targetY);
+                                   ctx.beginPath(); ctx.moveTo(0,0);
+                                   ctx.quadraticCurveTo(leaf.side * leaf.len, -5, leaf.side * (leaf.len*0.75), leaf.droop);
+                                   ctx.strokeStyle = mainColor; ctx.lineWidth = 1.2; ctx.stroke();
+                                   ctx.restore();
+                               }
+                            });
+                        }
+                        px = targetX; py = targetY;
+                    }
+                    ctx.fillStyle = accentColor;
+                    ctx.beginPath(); ctx.ellipse(px, py, 4, 22, Math.atan2(py - pos.y, px - pos.x) + Math.PI/2, 0, Math.PI * 2); ctx.fill();
+                }
+            }
 
-        setup(); animate();
+            class Moth {
+                constructor(isKey, type = 'moth') {
+                    this.isKey = isKey; this.type = type;
+                    const p = getScreenCoords(LAMP_IMG_X, LAMP_IMG_Y);
+                    this.x = p.x; this.y = p.y;
+                    this.vx = 0; this.vy = 0;
+                    this.bloat = 0; this.state = 'active'; this.patience = 100;
+                    this.size = isKey ? 4.5 : (type === 'gnat' ? 0.8 : 1.8);
+                }
+                update() {
+                    const lp = getScreenCoords(LAMP_IMG_X, LAMP_IMG_Y);
+                    const pp = getScreenCoords(PLANT_IMG_X, 0.40);
+                    if (this.state === 'bloating') {
+                        this.x += (mouse.x - this.x) * 0.15; this.y += (mouse.y - this.y) * 0.15;
+                        this.bloat += 0.25; if (this.bloat > 40) { portal.classList.add('active'); this.state = 'hidden'; transitioning = true; }
+                        return;
+                    }
+                    if (this.state === 'hidden') return;
+                    let tX = lp.x, tY = lp.y;
+                    if (mouse.x) {
+                        let d = Math.hypot(mouse.x - this.x, mouse.y - this.y);
+                        if (this.isKey) {
+                            if (d < 300) { tX = mouse.x; tY = mouse.y; this.patience = Math.min(100, this.patience + 0.2); }
+                            else { this.patience -= 0.5; if (this.patience <= 0) { this.x = lp.x; this.y = lp.y; this.patience = 100; } }
+                        } else { tX = lp.x + (Math.random()-0.5)*120; tY = lp.y + (Math.random()-0.5)*120; }
+                    }
+                    let accel = this.isKey ? 0.0003 : (this.type === 'gnat' ? 0.008 : 0.0012);
+                    this.vx += (tX - this.x) * accel + (Math.random()-0.5) * 0.3;
+                    this.vy += (tY - this.y) * accel + (Math.random()-0.5) * 0.3;
+                    this.x += this.vx; this.y += this.vy;
+                    this.vx *= 0.95; this.vy *= 0.95;
+                    if (this.isKey && Math.hypot(this.x - pp.x, this.y - pp.y) < 60 && this.patience > 80) this.state = 'bloating';
+                }
+                draw() {
+                    if (this.state === 'hidden') return;
+                    ctx.save(); ctx.translate(this.x, this.y);
+                    let flap = Math.sin(Date.now() * 0.035) * (this.isKey ? 10 : 4);
+                    // VISIBILITY HALO
+                    ctx.shadowBlur = 6; ctx.shadowColor = "rgba(255, 255, 200, 0.6)";
+                    ctx.fillStyle = this.isKey ? `rgba(255,255,255,${this.patience/100})` : 'rgba(255, 255, 220, 0.4)';
+                    ctx.beginPath(); ctx.ellipse(0, 0, 1.5+this.bloat/12, 3+this.bloat/10, 0, 0, Math.PI*2); ctx.fill();
+                    if (this.type !== 'gnat') {
+                        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-8-this.bloat/4, -3+flap); ctx.lineTo(-3,-7); ctx.fill();
+                        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(8+this.bloat/4, -3+flap); ctx.lineTo(3,-7); ctx.fill();
+                    }
+                    ctx.restore();
+                }
+            }
+
+            function setup() {
+                canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+                bugs = [new Moth(true)]; 
+                for (let i = 0; i < 8; i++) bugs.push(new Moth(false, 'moth'));
+                for (let i = 0; i < 15; i++) bugs.push(new Moth(false, 'gnat'));
+                stalks = [];
+                for (let i = 0; i < 25; i++) stalks.push(new Reed());
+            }
+
+            function animate() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                stalks.forEach(s => s.draw());
+                bugs.forEach(b => { b.update(); b.draw(); });
+                requestAnimationFrame(animate);
+            }
+
+            window.addEventListener('resize', setup);
+            setup(); 
+            animate();
+        };
     </script>
 </body>
 </html>
