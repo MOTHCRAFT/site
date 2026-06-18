@@ -7,7 +7,7 @@
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: monospace; }
         #loadingScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; transition: opacity 2s ease-in-out; }
-        .sanctuary-bg { position: fixed; top: 0; left: -10%; width: 120%; height: 100%; background: url('bg.jpg') no-repeat center center; background-size: cover; z-index: 1; transition: transform 0.8s cubic-bezier(0.1, 0.4, 0.2, 1); }
+        .sanctuary-bg { position: fixed; top: 0; left: -10%; width: 120%; height: 100%; background: url('bg.jpg') no-repeat center center; background-size: cover; z-index: 1; transition: transform 0.8s ease-out; }
         .frosted-filter { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%); opacity: 0.6; mix-blend-mode: overlay; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%); pointer-events: none; z-index: 10; }
         canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 15; }
@@ -56,7 +56,7 @@
                     this.relX = PLANT_IMG_X + spread; this.relY = PLANT_IMG_Y + (Math.random() * 0.08);
                     this.hMult = 0.30 + (Math.random() * 0.25); this.off = Math.random() * 1000;
                     this.curPush = 0; this.segments = 3; this.baseLean = (Math.random() - 0.5) * 0.4;
-                    this.w = 1.2 + (Math.random() * 3);
+                    this.w = 1.2 + (Math.random() * 2);
                     const distFromLight = Math.abs(this.relX - LAMP_IMG_X);
                     this.lightIntensity = Math.max(0.05, 1 - (distFromLight * 1.7));
                     this.leaves = Array.from({length: Math.floor(Math.random() * 3)}, () => ({
@@ -100,20 +100,30 @@
                 }
             }
 
-            class Bug {
+            class Critter {
                 constructor(isKey, type = 'moth') {
                     this.isKey = isKey; this.type = type;
                     const p = getScreenCoords(LAMP_IMG_X, LAMP_IMG_Y);
-                    this.x = p.x; this.y = p.y; this.vx = 0; this.vy = 0;
+                    this.x = p.x; this.y = p.y;
+                    this.vx = 0; this.vy = 0;
                     this.bloat = 0; this.state = 'active'; this.patience = 100;
-                    this.size = isKey ? 4.5 : (type === 'gnat' ? 0.6 : 1.6);
-                    this.hue = isKey ? '255, 255, 240' : (type === 'gnat' ? '255, 200, 100' : '200, 180, 150');
+                    
+                    // Diversity Logic
+                    if (isKey) {
+                        this.size = 4.5; this.hue = '255, 255, 240'; this.speedLimit = 0.95;
+                    } else if (type === 'gnat') {
+                        this.size = 0.5; this.hue = '255, 200, 100'; this.speedLimit = 0.90;
+                    } else if (type === 'crane') {
+                        this.size = 1.2; this.hue = '180, 180, 160'; this.speedLimit = 0.98; // Very slow
+                    } else {
+                        this.size = 1.6; this.hue = '150, 130, 100'; this.speedLimit = 0.96;
+                    }
                 }
                 update() {
                     const lp = getScreenCoords(LAMP_IMG_X, LAMP_IMG_Y), pp = getScreenCoords(PLANT_IMG_X, 0.40);
                     if (this.state === 'bloating') {
                         this.x += (mouse.x - this.x) * 0.15; this.y += (mouse.y - this.y) * 0.15;
-                        this.bloat += 0.25; if (this.bloat > 40) { portal.classList.add('active'); this.state = 'hidden'; transitioning = true; }
+                        this.bloat += 0.2; if (this.bloat > 40) { portal.classList.add('active'); this.state = 'hidden'; transitioning = true; }
                         return;
                     }
                     if (this.state === 'hidden') return;
@@ -121,27 +131,40 @@
                     if (mouse.x) {
                         let d = Math.hypot(mouse.x - this.x, mouse.y - this.y);
                         if (this.isKey) {
-                            if (d < 300) { tX = mouse.x; tY = mouse.y; this.patience = Math.min(100, this.patience + 0.15); }
-                            else { this.patience -= 0.3; if (this.patience <= 0) { this.x = lp.x; this.y = lp.y; this.patience = 100; } }
-                        } else if (this.type === 'moth' && d < 100) { tX = mouse.x; tY = mouse.y; }
+                            if (d < 300) { tX = mouse.x; tY = mouse.y; this.patience = Math.min(100, this.patience + 0.1); }
+                            else { this.patience -= 0.2; if (this.patience <= 0) { this.x = lp.x; this.y = lp.y; this.patience = 100; } }
+                        } else if (this.type !== 'gnat' && d < 80) { tX = mouse.x; tY = mouse.y; }
                     }
-                    let accel = this.isKey ? 0.0003 : (this.type === 'gnat' ? 0.012 : 0.001);
-                    this.vx += (tX - this.x) * accel + (Math.random()-0.5) * (this.type === 'gnat' ? 1.5 : 0.4);
-                    this.vy += (tY - this.y) * accel + (Math.random()-0.5) * (this.type === 'gnat' ? 1.5 : 0.4);
-                    this.x += this.vx; this.y += this.vy; this.vx *= 0.96; this.vy *= 0.96;
+                    
+                    // SLOW FLUTTER PHYSICS
+                    let accel = this.isKey ? 0.0002 : (this.type === 'gnat' ? 0.008 : 0.0005);
+                    this.vx += (tX - this.x) * accel + (Math.random()-0.5) * (this.type === 'gnat' ? 1.0 : 0.3);
+                    this.vy += (tY - this.y) * accel + (Math.random()-0.5) * (this.type === 'gnat' ? 1.0 : 0.3);
+                    this.x += this.vx; this.y += this.vy;
+                    this.vx *= this.speedLimit; this.vy *= this.speedLimit;
+
                     if (this.isKey && Math.hypot(this.x - pp.x, this.y - pp.y) < 60 && this.patience > 80) this.state = 'bloating';
                 }
                 draw() {
                     if (this.state === 'hidden') return;
                     ctx.save(); ctx.translate(this.x, this.y);
-                    let flap = Math.sin(Date.now() * 0.03) * (this.isKey ? 10 : 4);
-                    ctx.shadowBlur = this.isKey ? 10 : 3; ctx.shadowColor = `rgba(${this.hue}, 0.4)`;
+                    let time = Date.now() * 0.02;
+                    ctx.shadowBlur = this.isKey ? 10 : 2; ctx.shadowColor = `rgba(${this.hue}, 0.3)`;
                     ctx.fillStyle = `rgba(${this.hue}, ${this.isKey ? this.patience/100 : 0.3})`;
-                    ctx.beginPath(); ctx.ellipse(0, 0, 1.2+this.bloat/12, 2.5+this.bloat/10, 0, 0, Math.PI*2); ctx.fill();
-                    if (this.type !== 'gnat') {
-                        ctx.globalAlpha = 0.25;
-                        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-7-this.bloat/4, -3+flap); ctx.lineTo(-3,-6); ctx.fill();
-                        ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(7+this.bloat/4, -3+flap); ctx.lineTo(3,-6); ctx.fill();
+                    
+                    if (this.type === 'crane') {
+                        // Draw Long Critter
+                        ctx.rotate(Math.PI/4);
+                        ctx.fillRect(-1, -6, 1.5, 12);
+                    } else {
+                        // Draw Moth/Gnat Body
+                        ctx.beginPath(); ctx.ellipse(0, 0, this.size/1.5, this.size, 0, 0, Math.PI*2); ctx.fill();
+                        if (this.type !== 'gnat') {
+                            ctx.globalAlpha = 0.2;
+                            let flap = Math.sin(time) * 5;
+                            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-6, -2+flap); ctx.lineTo(-2,-5); ctx.fill();
+                            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(6, -2+flap); ctx.lineTo(2,-5); ctx.fill();
+                        }
                     }
                     ctx.restore();
                 }
@@ -149,9 +172,10 @@
 
             function setup() {
                 canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-                bugs = [new Bug(true)];
-                for (let i = 0; i < 8; i++) bugs.push(new Bug(false, 'moth'));
-                for (let i = 0; i < 35; i++) bugs.push(new Bug(false, 'gnat'));
+                bugs = [new Critter(true)];
+                for (let i = 0; i < 6; i++) bugs.push(new Critter(false, 'moth'));
+                for (let i = 0; i < 6; i++) bugs.push(new Critter(false, 'crane'));
+                for (let i = 0; i < 15; i++) bugs.push(new Critter(false, 'gnat'));
                 stalks = Array.from({length: 35}, () => new Reed());
             }
 
