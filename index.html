@@ -6,14 +6,12 @@
     <title>MOTHLABS</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: monospace; }
-        
         .sanctuary-bg { 
             position: fixed; top: 0; left: -10%; width: 120%; height: 100%; 
             background: url('bg.jpg') no-repeat center center; 
             background-size: cover; z-index: 1; 
             transition: transform 0.6s cubic-bezier(0.1, 0.4, 0.2, 1);
         }
-
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%); pointer-events: none; z-index: 10; }
         canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 15; }
 
@@ -44,7 +42,6 @@
         const bg = document.getElementById('bg'), canvas = document.getElementById('mainCanvas'), ctx = canvas.getContext('2d'), portal = document.getElementById('portalWrapper');
         let bugs = [], stalks = [], mouse = { x: null, y: null }, moveX = 0, isTransitioning = false;
 
-        // Anchor Constants (Percentages of the viewport)
         const lampPos = { x: 0.77, y: 0.24 };
         const plantPos = { x: 0.32, y: 0.38 };
 
@@ -62,39 +59,76 @@
             for (let i = 0; i < 20; i++) bugs.push(new Moth(false, 'gnat'));
             
             stalks = [];
-            const plantX = window.innerWidth * plantPos.x;
-            const plantY = window.innerHeight * 0.85;
-            for (let i = 0; i < 18; i++) {
-                stalks.push({
-                    relX: plantX - 150 + (Math.random() * 300),
-                    baseY: plantY + (Math.random() * 50),
-                    h: 500 + Math.random() * 300,
-                    w: 2 + Math.random() * 2,
-                    off: Math.random() * 1000,
-                    lSide: Math.random() > 0.5 ? 1 : -1,
-                    curP: 0
-                });
+            const pX = window.innerWidth * plantPos.x;
+            const pY = window.innerHeight * 0.82;
+            for (let i = 0; i < 14; i++) {
+                stalks.push(new Stalk(pX - 120 + (Math.random() * 240), pY + (Math.random() * 40)));
+            }
+        }
+
+        class Stalk {
+            constructor(x, y) {
+                this.relX = x; this.y = y;
+                this.h = 280 + Math.random() * 150; // Capped height
+                this.segments = 5;
+                this.off = Math.random() * 1000;
+                this.curPush = 0;
+            }
+            draw() {
+                let ax = this.relX - moveX;
+                let tP = 0;
+                if (mouse.x) {
+                    let dx = mouse.x - ax, d = Math.hypot(dx, mouse.y - (this.y - this.h/2));
+                    if (d < 220) tP = (dx > 0 ? -110 : 110) * (1 - d/220);
+                }
+                this.curPush += (tP - this.curPush) * 0.04;
+
+                // OBS BLENDING TRICK: Dark/Transparent at bottom
+                let grad = ctx.createLinearGradient(0, this.y, 0, this.y - this.h);
+                grad.addColorStop(0, 'rgba(0,0,0,0)');
+                grad.addColorStop(0.2, 'rgba(210, 180, 140, 0.3)'); // Fading in
+                grad.addColorStop(1, 'rgba(210, 180, 140, 0.7)'); // Full tan at top
+                
+                ctx.strokeStyle = grad;
+                ctx.lineWidth = 3;
+                
+                // Draw Segmented Stalk
+                let px = ax, py = this.y;
+                for (let i = 1; i <= this.segments; i++) {
+                    let t = i / this.segments;
+                    const wind = Math.sin(Date.now() * 0.0008 + this.off + i) * (5 * t);
+                    let targetX = ax + (Math.pow(t, 1.5) * this.curPush) + wind;
+                    let targetY = this.y - (this.h * t);
+                    
+                    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(targetX, targetY); ctx.stroke();
+                    
+                    // Add Nodes (Segments)
+                    ctx.fillStyle = grad;
+                    ctx.beginPath(); ctx.arc(targetX, targetY, 2, 0, Math.PI*2); ctx.fill();
+                    
+                    px = targetX; py = targetY;
+                }
+
+                // Feathered Head
+                ctx.fillStyle = 'rgba(210, 180, 140, 0.4)';
+                ctx.beginPath(); ctx.ellipse(px, py, 6, 22, Math.atan2(py - this.y, px - ax) + Math.PI/2, 0, Math.PI * 2); ctx.fill();
             }
         }
 
         class Moth {
             constructor(isKey, type = 'moth') {
                 this.isKey = isKey; this.type = type;
-                this.x = window.innerWidth * lampPos.x; 
-                this.y = window.innerHeight * lampPos.y;
-                this.vx = 0; this.vy = 0;
-                this.patience = 100; this.state = 'active'; this.bloat = 0;
-                this.size = isKey ? 4.5 : (type === 'gnat' ? 0.8 : 2);
+                this.x = window.innerWidth * lampPos.x; this.y = window.innerHeight * lampPos.y;
+                this.vx = 0; this.vy = 0; this.bloat = 0; this.state = 'active'; this.patience = 100;
+                this.size = isKey ? 5 : (type === 'gnat' ? 0.8 : 2);
             }
             update() {
-                const lx = (window.innerWidth * lampPos.x) - moveX;
-                const ly = window.innerHeight * lampPos.y;
-                const px = (window.innerWidth * plantPos.x) - moveX;
-                const py = window.innerHeight * plantPos.y;
+                const lx = (window.innerWidth * lampPos.x) - moveX, ly = window.innerHeight * lampPos.y;
+                const px = (window.innerWidth * plantPos.x) - moveX, py = window.innerHeight * plantPos.y;
 
                 if (this.state === 'bloating') {
-                    this.x += (mouse.x - this.x) * 0.15; this.y += (mouse.y - this.y) * 0.15;
-                    this.bloat += 0.3; if (this.bloat > 40) { portal.classList.add('active'); this.state = 'hidden'; isTransitioning = true; }
+                    this.x += (mouse.x - this.x) * 0.2; this.y += (mouse.y - this.y) * 0.2;
+                    this.bloat += 0.35; if (this.bloat > 45) { portal.classList.add('active'); this.state = 'hidden'; isTransitioning = true; }
                     return;
                 }
                 if (this.state === 'hidden') return;
@@ -103,25 +137,24 @@
                 if (mouse.x) {
                     let d = Math.hypot(mouse.x - this.x, mouse.y - this.y);
                     if (this.isKey) {
-                        if (d < 300) { tX = mouse.x; tY = mouse.y; this.patience = Math.min(100, this.patience + 0.2); }
-                        else { this.patience -= 0.4; if (this.patience <= 0) { this.x = lx; this.y = ly; this.patience = 100; } }
-                    } else { tX = lx + (Math.random()-0.5)*80; tY = ly + (Math.random()-0.5)*80; }
+                        if (d < 320) { tX = mouse.x; tY = mouse.y; this.patience = Math.min(100, this.patience + 0.2); }
+                        else { this.patience -= 0.3; if (this.patience <= 0) { this.x = lx; this.y = ly; this.patience = 100; } }
+                    } else { tX = lx + (Math.random()-0.5)*120; tY = ly + (Math.random()-0.5)*120; }
                 }
 
-                // DRIFT PHYSICS (Lower accel, more friction)
-                let accel = this.isKey ? 0.0004 : (this.type === 'gnat' ? 0.01 : 0.001);
-                this.vx += (tX - this.x) * accel + (Math.random()-0.5) * 0.5;
-                this.vy += (tY - this.y) * accel + (Math.random()-0.5) * 0.5;
+                let accel = this.isKey ? 0.0004 : (this.type === 'gnat' ? 0.008 : 0.001);
+                this.vx += (tX - this.x) * accel + (Math.random()-0.5) * 0.4;
+                this.vy += (tY - this.y) * accel + (Math.random()-0.5) * 0.4;
                 this.x += this.vx; this.y += this.vy;
-                this.vx *= 0.94; this.vy *= 0.94;
+                this.vx *= 0.95; this.vy *= 0.95;
 
                 if (this.isKey && Math.hypot(this.x - px, this.y - py) < 60 && this.patience > 80) this.state = 'bloating';
             }
             draw() {
                 if (this.state === 'hidden') return;
                 ctx.save(); ctx.translate(this.x, this.y);
-                let flap = Math.sin(Date.now() * 0.04) * (this.isKey ? 10 : 4);
-                ctx.fillStyle = this.isKey ? `rgba(255,255,255,${this.patience/100})` : 'rgba(200,190,160,0.15)';
+                let flap = Math.sin(Date.now() * 0.04) * (this.isKey ? 12 : 5);
+                ctx.fillStyle = this.isKey ? `rgba(255,255,255,${this.patience/100})` : 'rgba(255, 255, 200, 0.15)';
                 ctx.beginPath(); ctx.ellipse(0, 0, 1.5+this.bloat/12, 3+this.bloat/10, 0, 0, Math.PI*2); ctx.fill();
                 if (this.type !== 'gnat') {
                     ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-8-this.bloat/4, -3+flap); ctx.lineTo(-3,-7); ctx.fill();
@@ -131,42 +164,13 @@
             }
         }
 
-        function drawVeil() {
-            stalks.forEach(s => {
-                let ax = s.relX - moveX;
-                let tP = 0;
-                if (mouse.x) {
-                    let d = Math.hypot(mouse.x - ax, mouse.y - (s.baseY - s.h/2));
-                    if (d < 200) tP = (mouse.x - ax > 0 ? -90 : 90) * (1 - d/200);
-                }
-                s.curP += (tP - s.curP) * 0.03;
-                const endX = ax + s.curP + Math.sin(Date.now()*0.0006 + s.off)*10, endY = s.baseY - s.h;
-
-                ctx.strokeStyle = 'rgba(210, 180, 140, 0.6)'; ctx.lineWidth = s.w;
-                ctx.beginPath(); ctx.moveTo(ax, s.baseY);
-                ctx.quadraticCurveTo(ax + s.curP*0.5, s.baseY - s.h/2, endX, endY);
-                ctx.stroke();
-
-                // Leaf
-                let lx = ax + (endX - ax) * 0.6, ly = s.baseY - s.h * 0.6;
-                ctx.beginPath(); ctx.moveTo(lx, ly);
-                ctx.quadraticCurveTo(lx + (s.leafSide * 40), ly - 15, lx + (s.leafSide * 25), ly + 45);
-                ctx.stroke();
-                
-                // Fuzzy Tip
-                ctx.fillStyle = 'rgba(210, 180, 140, 0.4)';
-                ctx.beginPath(); ctx.ellipse(endX, endY, s.w*1.5, 20, Math.atan2(endY-s.baseY, endX-ax)+Math.PI/2, 0, Math.PI*2); ctx.fill();
-            });
-        }
-
         function animate() {
             ctx.clearRect(0,0,canvas.width,canvas.height);
-            drawVeil();
+            stalks.forEach(s => s.draw());
             bugs.forEach(b => { b.update(); b.draw(); });
             requestAnimationFrame(animate);
         }
 
-        window.addEventListener('resize', setup);
         setup(); animate();
     </script>
 </body>
