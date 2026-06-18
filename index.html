@@ -6,44 +6,30 @@
     <title>MOTHLABS</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: monospace; }
-        
-        /* The Masterpiece Background */
-        .sanctuary-bg { 
-            position: fixed; top: 0; left: -10%; width: 120%; height: 100%; 
-            background: url('bg.jpg') no-repeat center center; 
-            background-size: cover; z-index: 1; transition: transform 0.7s ease-out; 
-        }
-
-        /* Noir Atmospheric Overlay */
-        .overlay { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%); 
-            pointer-events: none; z-index: 10; 
-        }
-
-        /* Interaction Canvas */
+        .sanctuary-bg { position: fixed; top: 0; left: -10%; width: 120%; height: 100%; background: url('bg.jpg') no-repeat center center; background-size: cover; z-index: 1; transition: transform 0.8s ease-out; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%); pointer-events: none; z-index: 10; }
         canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 15; }
 
-        /* Steampunk/Cyber Terminal */
+        /* Organic Minimalist Terminal */
         #portalWrapper {
             position: fixed; top: 50%; left: 30%; transform: translate(-50%, -50%) scale(0);
-            width: 320px; height: 520px; background: rgba(2, 6, 2, 0.98);
-            border: 2px solid #00ff41; z-index: 100; opacity: 0;
+            width: 320px; height: 480px; background: rgba(5, 5, 5, 0.85);
+            border: 1px solid rgba(200, 180, 140, 0.2); z-index: 100; opacity: 0;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            box-shadow: 0 0 50px rgba(0,255,65,0.4);
-            border-radius: 30px;
-            transition: all 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            border-radius: 40px;
+            transition: all 1.5s cubic-bezier(0.2, 1, 0.3, 1);
             overflow: hidden;
         }
         #portalWrapper.active { transform: translate(-50%, -50%) scale(1); opacity: 1; }
         
-        /* Input Styling */
         .field { 
-            background: rgba(255,255,255,0.03); border: 1px solid rgba(0,255,65,0.3); 
-            color: #00ff41; padding: 15px; width: 70%; border-radius: 10px; 
-            outline: none; margin-bottom: 15px; text-align: center; font-family: monospace;
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(200, 180, 140, 0.1); 
+            color: rgba(200, 180, 140, 0.6); padding: 18px; width: 70%; border-radius: 15px; 
+            outline: none; margin-bottom: 20px; text-align: center; font-family: monospace;
+            transition: border 0.5s;
         }
-        h2 { color: #00ff41; letter-spacing: 10px; margin: 0; text-shadow: 0 0 10px #00ff41; font-size: 22px; }
+        .field:focus { border: 1px solid rgba(200, 180, 140, 0.4); }
     </style>
 </head>
 <body>
@@ -52,20 +38,16 @@
     <canvas id="mainCanvas"></canvas>
 
     <div id="portalWrapper">
-        <h2>MOTHLABS</h2>
-        <div style="width: 60%; height: 1px; background: linear-gradient(to right, transparent, #00ff41, transparent); margin: 30px 0;"></div>
-        <input type="text" class="field" placeholder="">
-        <input type="password" class="field" placeholder="">
-        <p style="color: #003311; font-size: 9px; margin-top: 20px; letter-spacing: 2px;">[RE-ESTABLISHING HENRY_PROTOCOL]</p>
+        <input type="text" class="field" spellcheck="false" autocomplete="off">
+        <input type="password" class="field">
     </div>
 
     <script>
         const bg = document.getElementById('bg'), canvas = document.getElementById('mainCanvas'), ctx = canvas.getContext('2d'), portal = document.getElementById('portalWrapper');
-        let bugs = [], stalks = [], mouse = { x: null, y: null }, moveX = 0, isTransitioning = false;
+        let bugs = [], stalks = [], dust = [], mouse = { x: null, y: null }, moveX = 0, isTransitioning = false;
 
-        // TARGET LOCATIONS (Coordinates based on bg.jpg)
-        const lx = () => window.innerWidth * 0.77, ly = () => window.innerHeight * 0.24; // Lamp Globe
-        const px = () => window.innerWidth * 0.32, py = () => window.innerHeight * 0.45; // Frosty Buds
+        const lx = () => window.innerWidth * 0.77, ly = () => window.innerHeight * 0.24;
+        const px = () => window.innerWidth * 0.32, py = () => window.innerHeight * 0.38; // Nudged higher for tops
 
         window.addEventListener('mousemove', (e) => {
             if (isTransitioning) return;
@@ -76,15 +58,17 @@
 
         function setup() {
             canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            bugs = [new Moth(true)]; for (let i = 0; i < 35; i++) bugs.push(new Moth(false));
+            bugs = [new Moth(true)]; 
+            for (let i = 0; i < 8; i++) bugs.push(new Moth(false, 'moth'));
+            for (let i = 0; i < 15; i++) bugs.push(new Moth(false, 'gnat'));
+            
             stalks = [];
-            for (let i = 0; i < 18; i++) {
+            for (let i = 0; i < 16; i++) {
                 stalks.push({
-                    relX: (px() - 140 + (Math.random() * 280)),
-                    baseY: window.innerHeight * (0.82 + (Math.random() * 0.05)),
-                    h: 400 + Math.random() * 350, 
-                    w: 2 + Math.random() * 3,
-                    stiffness: 0.03 + Math.random() * 0.06,
+                    relX: (px() - 150 + (Math.random() * 300)),
+                    baseY: window.innerHeight * (0.80 + (Math.random() * 0.05)),
+                    h: 450 + Math.random() * 400, 
+                    w: 2 + Math.random() * 2,
                     off: Math.random() * 1000,
                     lSide: Math.random() > 0.5 ? 1 : -1,
                     curP: 0
@@ -93,16 +77,17 @@
         }
 
         class Moth {
-            constructor(isKey) {
-                this.isKey = isKey; this.x = lx(); this.y = ly(); this.vx = 0; this.vy = 0;
+            constructor(isKey, type = 'moth') {
+                this.isKey = isKey; this.type = type;
+                this.x = lx(); this.y = ly(); this.vx = 0; this.vy = 0;
                 this.patience = 100; this.state = 'active'; this.bloat = 0;
+                this.size = isKey ? 4.5 : (type === 'gnat' ? 0.8 : 2);
             }
             update() {
                 if (this.state === 'bloating') {
-                    // Settle on cursor
-                    this.x += (mouse.x - this.x) * 0.15; this.y += (mouse.y - this.y) * 0.15;
-                    this.bloat += 0.4; 
-                    if (this.bloat > 50) { portal.classList.add('active'); this.state = 'hidden'; }
+                    this.x += (mouse.x - this.x) * 0.1; this.y += (mouse.y - this.y) * 0.1;
+                    this.bloat += 0.25; 
+                    if (this.bloat > 40) { isTransitioning = true; portal.classList.add('active'); this.state = 'hidden'; }
                     return;
                 }
                 if (this.state === 'hidden') return;
@@ -111,76 +96,87 @@
                 if (mouse.x) {
                     let d = Math.hypot(mouse.x - this.x, mouse.y - this.y);
                     if (this.isKey) {
-                        if (d < 300) { targetX = mouse.x; targetY = mouse.y; this.patience = Math.min(100, this.patience + 0.3); }
-                        else { this.patience -= 0.6; }
+                        if (d < 300) { targetX = mouse.x; targetY = mouse.y; this.patience = Math.min(100, this.patience + 0.2); }
+                        else { this.patience -= 0.4; }
                         if (this.patience <= 0) { this.x = lx(); this.y = ly(); this.patience = 100; }
                     } else { 
-                        targetX = lx() - moveX + (Math.random()-0.5)*50; 
-                        targetY = ly() + (Math.random()-0.5)*50; 
+                        targetX = lx() - moveX + (Math.random()-0.5)*100; 
+                        targetY = ly() + (Math.random()-0.5)*100; 
                     }
                 }
 
-                this.vx += (targetX - this.x) * (this.isKey ? 0.001 : 0.005) + (Math.random()-0.5) * 1.5;
-                this.vy += (targetY - this.y) * (this.isKey ? 0.001 : 0.005) + (Math.random()-0.5) * 1.5;
+                let accel = this.isKey ? 0.0008 : (this.type === 'gnat' ? 0.02 : 0.002);
+                this.vx += (targetX - this.x) * accel + (Math.random()-0.5) * (this.type === 'gnat' ? 2 : 1);
+                this.vy += (targetY - this.y) * accel + (Math.random()-0.5) * (this.type === 'gnat' ? 2 : 1);
                 this.x += this.vx; this.y += this.vy;
-                this.vx *= 0.92; this.vy *= 0.92;
+                this.vx *= 0.94; this.vy *= 0.94;
 
-                // Threshold to start bloating on the plant
-                if (this.isKey && Math.hypot(this.x - (px() - moveX), this.y - py()) < 60 && this.patience > 80) {
-                    this.state = 'bloating'; isTransitioning = true;
+                if (this.isKey && Math.hypot(this.x - (px() - moveX), this.y - py()) < 50 && this.patience > 80) {
+                    this.state = 'bloating';
                 }
             }
             draw() {
                 if (this.state === 'hidden') return;
                 ctx.save();
                 ctx.translate(this.x, this.y);
-                let wingFlap = Math.sin(Date.now() * 0.07) * (this.isKey ? 14 : 6);
-                ctx.fillStyle = this.isKey ? `rgba(255,255,255,${this.patience/100})` : 'rgba(255,255,180,0.15)';
+                let wingFlap = Math.sin(Date.now() * 0.04) * (this.isKey ? 10 : 4);
+                ctx.fillStyle = this.isKey ? `rgba(255,255,255,${this.patience/100})` : 'rgba(200, 190, 160, 0.2)';
                 
-                // Draw Body
-                ctx.beginPath(); ctx.ellipse(0, 0, 2 + this.bloat/12, 4 + this.bloat/10, 0, 0, Math.PI*2); ctx.fill();
-                // Draw Wings
-                ctx.beginPath(); ctx.moveTo(0,0); 
-                ctx.lineTo(-10 - this.bloat/3, -5 + wingFlap); ctx.lineTo(-5, -10); ctx.fill();
-                ctx.beginPath(); ctx.moveTo(0,0); 
-                ctx.lineTo(10 + this.bloat/3, -5 + wingFlap); ctx.lineTo(5, -10); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(0, 0, 1.5 + this.bloat/15, 3 + this.bloat/12, 0, 0, Math.PI*2); ctx.fill();
+                if (this.type !== 'gnat') {
+                    ctx.beginPath(); ctx.moveTo(0,0); 
+                    ctx.lineTo(-8 - this.bloat/4, -3 + wingFlap); ctx.lineTo(-3, -7); ctx.fill();
+                    ctx.beginPath(); ctx.moveTo(0,0); 
+                    ctx.lineTo(8 + this.bloat/4, -3 + wingFlap); ctx.lineTo(3, -7); ctx.fill();
+                }
                 ctx.restore();
             }
         }
 
         function drawVeil() {
-            ctx.strokeStyle = 'rgba(10, 15, 8, 0.98)'; // Dark Moss Green-Black
             stalks.forEach(s => {
                 let ax = s.relX - moveX, tP = 0;
                 if (mouse.x) {
-                    let dx = mouse.x - ax, d = Math.hypot(dx, mouse.y - (s.baseY - s.h/2));
-                    if (d < 220) tP = (dx > 0 ? -100 : 100) * (1 - d/220);
+                    let d = Math.hypot(mouse.x - ax, mouse.y - (s.baseY - s.h/2));
+                    if (d < 250) tP = (dx = mouse.x - ax, dx > 0 ? -70 : 70) * (1 - d/250);
                 }
-                s.curP += (tP - s.curP) * 0.04;
-                const time = Date.now() * 0.0008;
-                const endX = ax + s.curP + Math.sin(time + s.off) * 10;
+                s.curP += (tP - s.curP) * 0.03;
+                const time = Date.now() * 0.0006;
+                const wind = Math.sin(time + s.off) * 8;
+                
+                // Segmented Movement (3 Points)
+                const endX = ax + s.curP + wind;
                 const endY = s.baseY - s.h;
+                const midX = ax + s.curP * 0.3 + wind * 0.5;
+                const midY = s.baseY - s.h * 0.5;
 
                 ctx.lineWidth = s.w;
-                ctx.beginPath(); ctx.moveTo(ax, s.baseY);
-                ctx.quadraticCurveTo(ax + s.curP * 0.5, s.baseY - s.h/2, endX, endY);
+                ctx.beginPath();
+                ctx.moveTo(ax, s.baseY);
+                ctx.quadraticCurveTo(midX, midY, endX, endY);
+                
+                // Color - Natural Green with Amber Highlight on one side
+                let grad = ctx.createLinearGradient(ax-5, s.baseY, ax+5, s.baseY);
+                grad.addColorStop(0, 'rgba(10, 15, 5, 0.95)');
+                grad.addColorStop(1, 'rgba(200, 180, 140, 0.1)'); // The "Light Glint"
+                ctx.strokeStyle = grad;
                 ctx.stroke();
 
-                // Single drooped leaf per reed
-                let lx = ax + (endX - ax) * 0.65, ly = s.baseY - s.h * 0.65;
+                // Drooping Leaf
+                let lx = ax + (endX - ax) * 0.6, ly = s.baseY - s.h * 0.6;
                 ctx.beginPath(); ctx.moveTo(lx, ly);
-                ctx.quadraticCurveTo(lx + (s.leafSide * 40), ly - 15, lx + (s.leafSide * 25), ly + 50);
+                ctx.quadraticCurveTo(lx + (s.lSide * 30), ly - 10, lx + (s.lSide * 20), ly + 35);
                 ctx.stroke();
 
-                // Feathered Head
-                ctx.fillStyle = 'rgba(20, 25, 15, 0.5)';
-                ctx.beginPath(); ctx.ellipse(endX, endY, s.w * 2, 25, Math.atan2(endY - s.baseY, endX - ax) + Math.PI/2, 0, Math.PI * 2); ctx.fill();
+                // Feathered Tip
+                ctx.fillStyle = 'rgba(25, 30, 15, 0.6)';
+                ctx.beginPath(); ctx.ellipse(endX, endY, s.w * 1.5, 18, Math.atan2(endY - s.baseY, endX - ax) + Math.PI/2, 0, Math.PI * 2); ctx.fill();
             });
         }
 
         function animate() {
             ctx.clearRect(0,0,canvas.width,canvas.height);
-            if (!isTransitioning) drawVeil();
+            drawVeil();
             bugs.forEach(b => { b.update(); b.draw(); });
             requestAnimationFrame(animate);
         }
