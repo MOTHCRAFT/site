@@ -7,7 +7,7 @@
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: monospace; }
         #loadingScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 1000; transition: opacity 2s ease-in-out; }
-        .sanctuary-bg { position: fixed; top: 0; left: -10%; width: 120%; height: 100%; background: url('bg.jpg') no-repeat center center; background-size: cover; z-index: 1; transition: transform 0.8s ease-out; }
+        .sanctuary-bg { position: fixed; top: 0; left: -10%; width: 120%; height: 100%; background: url('bg.jpg') no-repeat center center; background-size: cover; z-index: 1; transition: transform 0.8s cubic-bezier(0.1, 0.4, 0.2, 1); }
         .frosted-filter { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%); opacity: 0.6; mix-blend-mode: overlay; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 100%); pointer-events: none; z-index: 10; }
         canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 15; }
@@ -107,16 +107,16 @@
                     this.x = p.x; this.y = p.y;
                     this.vx = 0; this.vy = 0;
                     this.bloat = 0; this.state = 'active'; this.patience = 100;
+                    this.off = Math.random() * 1000;
                     
-                    // Diversity Logic
                     if (isKey) {
-                        this.size = 4.5; this.hue = '255, 255, 240'; this.speedLimit = 0.95;
+                        this.size = 3.5; this.hue = '255, 255, 240'; this.speedLimit = 0.96;
                     } else if (type === 'gnat') {
-                        this.size = 0.5; this.hue = '255, 200, 100'; this.speedLimit = 0.90;
+                        this.size = 0.4; this.hue = '255, 220, 120'; this.speedLimit = 0.92;
                     } else if (type === 'crane') {
-                        this.size = 1.2; this.hue = '180, 180, 160'; this.speedLimit = 0.98; // Very slow
+                        this.size = 0.8; this.hue = '160, 160, 150'; this.speedLimit = 0.98;
                     } else {
-                        this.size = 1.6; this.hue = '150, 130, 100'; this.speedLimit = 0.96;
+                        this.size = 1.4; this.hue = '140, 130, 110'; this.speedLimit = 0.96;
                     }
                 }
                 update() {
@@ -133,37 +133,41 @@
                         if (this.isKey) {
                             if (d < 300) { tX = mouse.x; tY = mouse.y; this.patience = Math.min(100, this.patience + 0.1); }
                             else { this.patience -= 0.2; if (this.patience <= 0) { this.x = lp.x; this.y = lp.y; this.patience = 100; } }
-                        } else if (this.type !== 'gnat' && d < 80) { tX = mouse.x; tY = mouse.y; }
+                        } else if (this.type !== 'gnat' && d < 70) { tX = mouse.x; tY = mouse.y; }
                     }
-                    
-                    // SLOW FLUTTER PHYSICS
                     let accel = this.isKey ? 0.0002 : (this.type === 'gnat' ? 0.008 : 0.0005);
-                    this.vx += (tX - this.x) * accel + (Math.random()-0.5) * (this.type === 'gnat' ? 1.0 : 0.3);
-                    this.vy += (tY - this.y) * accel + (Math.random()-0.5) * (this.type === 'gnat' ? 1.0 : 0.3);
+                    this.vx += (tX - this.x) * accel + (Math.random()-0.5) * (this.type === 'gnat' ? 0.8 : 0.2);
+                    this.vy += (tY - this.y) * accel + (Math.random()-0.5) * (this.type === 'gnat' ? 0.8 : 0.2);
                     this.x += this.vx; this.y += this.vy;
                     this.vx *= this.speedLimit; this.vy *= this.speedLimit;
-
                     if (this.isKey && Math.hypot(this.x - pp.x, this.y - pp.y) < 60 && this.patience > 80) this.state = 'bloating';
                 }
                 draw() {
                     if (this.state === 'hidden') return;
                     ctx.save(); ctx.translate(this.x, this.y);
-                    let time = Date.now() * 0.02;
-                    ctx.shadowBlur = this.isKey ? 10 : 2; ctx.shadowColor = `rgba(${this.hue}, 0.3)`;
-                    ctx.fillStyle = `rgba(${this.hue}, ${this.isKey ? this.patience/100 : 0.3})`;
+                    let time = Date.now() * 0.002;
+                    let shimmer = Math.sin(Date.now() * 0.01 + this.off) * 0.3 + 0.5;
+                    ctx.shadowBlur = this.isKey ? 10 : 3; ctx.shadowColor = `rgba(${this.hue}, 0.3)`;
+                    ctx.fillStyle = `rgba(${this.hue}, ${this.isKey ? this.patience/100 : 0.25})`;
                     
                     if (this.type === 'crane') {
-                        // Draw Long Critter
-                        ctx.rotate(Math.PI/4);
-                        ctx.fillRect(-1, -6, 1.5, 12);
+                        ctx.rotate(Math.PI/4 + Math.sin(time)*0.2);
+                        ctx.fillRect(-0.5, -2, 1, 4); // Shortened body
+                        ctx.globalAlpha = shimmer * 0.2;
+                        ctx.beginPath(); ctx.ellipse(-2, 0, 2, 0.5, 0, 0, Math.PI*2); ctx.fill();
+                        ctx.beginPath(); ctx.ellipse(2, 0, 2, 0.5, 0, 0, Math.PI*2); ctx.fill();
                     } else {
-                        // Draw Moth/Gnat Body
-                        ctx.beginPath(); ctx.ellipse(0, 0, this.size/1.5, this.size, 0, 0, Math.PI*2); ctx.fill();
+                        // Tapered body for moths
+                        ctx.beginPath(); 
+                        ctx.moveTo(0, -this.size); 
+                        ctx.quadraticCurveTo(this.size, 0, 0, this.size); 
+                        ctx.quadraticCurveTo(-this.size, 0, 0, -this.size); 
+                        ctx.fill();
                         if (this.type !== 'gnat') {
-                            ctx.globalAlpha = 0.2;
-                            let flap = Math.sin(time) * 5;
-                            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-6, -2+flap); ctx.lineTo(-2,-5); ctx.fill();
-                            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(6, -2+flap); ctx.lineTo(2,-5); ctx.fill();
+                            ctx.globalAlpha = shimmer * 0.15;
+                            let flap = Math.sin(Date.now() * 0.04) * 6;
+                            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-6, -1+flap); ctx.lineTo(-2,-4); ctx.fill();
+                            ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(6, -1+flap); ctx.lineTo(2,-4); ctx.fill();
                         }
                     }
                     ctx.restore();
@@ -173,8 +177,8 @@
             function setup() {
                 canvas.width = window.innerWidth; canvas.height = window.innerHeight;
                 bugs = [new Critter(true)];
-                for (let i = 0; i < 6; i++) bugs.push(new Critter(false, 'moth'));
-                for (let i = 0; i < 6; i++) bugs.push(new Critter(false, 'crane'));
+                for (let i = 0; i < 7; i++) bugs.push(new Critter(false, 'moth'));
+                for (let i = 0; i < 7; i++) bugs.push(new Critter(false, 'crane'));
                 for (let i = 0; i < 15; i++) bugs.push(new Critter(false, 'gnat'));
                 stalks = Array.from({length: 35}, () => new Reed());
             }
